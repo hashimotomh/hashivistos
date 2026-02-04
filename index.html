@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Consulta de Atividades - Alunos</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root { --primary: #2563eb; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --bg: #f1f5f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 500px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #1e293b; margin-top: 0; }
+        input { width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; margin-bottom: 20px; text-align: center; }
+        input:focus { border-color: var(--primary); outline: none; }
+        .perfil { display: none; background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid var(--primary); margin-bottom: 20px; }
+        .bim-selector { display: flex; gap: 8px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap;}
+        .btn-bim { padding: 10px 15px; border: 1px solid var(--primary); background: white; color: var(--primary); border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; min-width: 80px;}
+        .btn-bim.active { background: var(--primary); color: white; }
+        .card { background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 6px solid #ddd; }
+        .card small { color: #64748b; display: block; margin: 2px 0; }
+        .status { font-weight: bold; font-size: 13px; margin-top: 5px; display: block; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📓 Portal do Aluno</h2>
+    <input type="text" id="search-cod" placeholder="Passe seu código de aluno aqui" onkeyup="consultar()">
+    
+    <div id="perfil-aluno" class="perfil">
+        <h4 id="nome-aluno" style="margin:0;"></h4>
+        <p id="turma-aluno" style="margin:5px 0; font-size: 13px; color: #64748b;"></p>
+        <div class="bim-selector">
+            <button class="btn-bim active" onclick="setBim(1)">1º Bim</button>
+            <button class="btn-bim" onclick="setBim(2)">2º Bim</button>
+            <button class="btn-bim" onclick="setBim(3)">3º Bim</button>
+            <button class="btn-bim" onclick="setBim(4)">4º Bim</button>
+        </div>
+    </div>
+    
+    <div id="resultado"></div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAXeJ1B2IJAbOo7eUIla4_nAn86wVNLHVE",
+  authDomain: "registrosala.firebaseapp.com",
+  projectId: "registrosala",
+  storageBucket: "registrosala.firebasestorage.app",
+  messagingSenderId: "172799882750",
+  appId: "1:172799882750:web:4b5eeac5d456393621fcaf",
+  measurementId: "G-FXS611JDV3"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let bimAtivo = "1";
+let alunoCache = null;
+let ativsCache = [];
+
+async function consultar() {
+    const cod = document.getElementById('search-cod').value.trim();
+    if(!cod) return;
+    const doc = await db.collection("alunos").doc(cod).get();
+    if(doc.exists) {
+        alunoCache = doc.data();
+        document.getElementById('perfil-aluno').style.display = "block";
+        document.getElementById('nome-aluno').innerText = "Olá, " + alunoCache.nome;
+        document.getElementById('turma-aluno').innerText = "Turma: " + alunoCache.turma;
+        
+        // Carrega atividades da turma
+        const snapAtiv = await db.collection("atividades").where("turma", "==", alunoCache.turma).get();
+        ativsCache = []; snapAtiv.forEach(d => ativsCache.push(d.data()));
+        
+        renderizar();
+    }
+}
+
+function setBim(b) {
+    bimAtivo = b.toString();
+    document.querySelectorAll('.btn-bim').forEach((btn, i) => btn.classList.toggle('active', i+1 == b));
+    renderizar();
+}
+
+async function renderizar() {
+    if(!alunoCache) return;
+    const resDiv = document.getElementById('resultado');
+    const ativsBim = ativsCache.filter(a => a.bimestre === bimAtivo);
+    
+    const snapReg = await db.collection("registros").where("cod", "==", alunoCache.cod).where("bimestre", "==", bimAtivo).get();
+    const feitos = {}; snapReg.forEach(d => feitos[d.data().ativ] = d.data());
+    
+    let html = "";
+    ativsBim.forEach(a => {
+        const f = feitos[a.nome];
+        let cor = "#f87171"; let st = "❌ Não entregue"; let entrega = "";
+        if(f) {
+            const atraso = Math.ceil((parseData(f.data) - parseData(a.dataCriacao)) / (1000*60*60*24)) > 5;
+            cor = atraso ? "#fbbf24" : "#10b981";
+            st = atraso ? "⚠️ Entregue com atraso" : "✅ Entregue no prazo";
+            entrega = `<small><b>Sua entrega:</b> ${f.data} às ${f.hora}</small>`;
+        }
+        html += `<div class="card" style="border-left-color: ${cor}">
+            <strong>${a.nome}</strong>
+            <small><b>Postagem:</b> ${a.dataCriacao}</small>
+            ${entrega}
+            <span class="status" style="color:${cor}">${st}</span>
+        </div>`;
+    });
+    resDiv.innerHTML = ativsBim.length ? html : "<p style='text-align:center; color:#64748b;'>Nenhuma atividade neste bimestre.</p>";
+}
+
+function parseData(s) { if(!s) return new Date(); const p = s.split('/'); return new Date(p[2], p[1]-1, p[0]); }
+</script>
+</body>
+</html>
