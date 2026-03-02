@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel do Professor - Premium v3</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root { --primary: #2563eb; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --dark: #1e293b; --bg: #f1f5f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 1350px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        /* Grid de Turmas */
+        .grid-turmas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
+        .btn-turma { padding: 15px 25px; font-size: 15px; font-weight: bold; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 120px; transition: 0.2s; }
+        .btn-turma:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+        /* Interface Principal */
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; margin-top: 15px; }
+        .tab-btn { flex: 1; padding: 12px; cursor: pointer; border: none; background: #cbd5e1; font-weight: bold; border-radius: 6px; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .header-info { display: flex; justify-content: space-between; align-items: center; background: var(--dark); color: white; padding: 12px 20px; border-radius: 8px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; margin-bottom: 30px; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; }
+        
+        /* Dashboard */
+        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { padding: 15px; border-radius: 8px; color: white; text-align: center; }
+        .card-warning { background: var(--warning); }
+        .card-danger { background: var(--danger); }
+        .card-success { background: var(--success); }
+
+        /* Ocorrências com as Cores Solicitadas */
+        .btn-oc { padding: 6px 8px; margin: 2px; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 10px; font-weight: bold; }
+        .oc-1 { background: #6366f1; } /* Atrapalhou */
+        .oc-2 { background: #f59e0b; } /* Sem Lição */
+        .oc-3 { background: #f97316; } /* Sem Tarefa */
+        .oc-4 { background: #dc2626; } /* Agressão */
+        .oc-5 { background: #7f1d1d; } /* Desrespeito */
+        .oc-6 { background: #64748b; } /* Sem Material */
+        .oc-7 { background: #450a0a; } /* Fraude */
+        .oc-8 { background: #064e3b; } /* Celular */
+        .oc-9 { background: #a855f7; } /* NOVO: Dormiu em sala (Roxo) */
+        
+        .btn-reset { background: none; border: none; cursor: pointer; font-size: 1.2em; filter: grayscale(1); transition: 0.2s; }
+        .btn-reset:hover { filter: grayscale(0); transform: scale(1.2); }
+        .check-click { color: #10b981; cursor: pointer; font-size: 1.3em; font-weight: bold; }
+        
+        /* Listas ADM e Diário */
+        .admin-list, .diario-list { max-height: 350px; overflow-y: auto; background: #fafafa; border: 1px solid #eee; padding: 10px; border-radius: 8px; }
+        .admin-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; align-items: center; }
+        
+        /* Efeito Hover nos nomes (ADM) */
+        .admin-item span { cursor: pointer; transition: 0.2s; flex-grow: 1; }
+        .admin-item span:hover { color: var(--primary); font-weight: bold; transform: translateX(5px); }
+
+        /* Cards do Diário */
+        .diario-card { background: white; border-left: 5px solid var(--primary); padding: 15px; margin-bottom: 12px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; }
+        .diario-content { flex-grow: 1; }
+        .diario-date { font-size: 0.85em; color: #64748b; font-weight: bold; display: block; margin-bottom: 4px; }
+        
+        input, select, textarea { padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; width: 100%; box-sizing: border-box; }
+        .no-pdf { color: #94a3b8; }
+        canvas { max-height: 250px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="tela-selecao-turma">
+        <h1 style="text-align: center;">🏫 GESTÃO PROFESSOR</h1>
+        <div class="grid-turmas">
+            <button class="btn-turma" onclick="selecionarTurma('1A ROB')">1A ROB</button>
+            <button class="btn-turma" onclick="selecionarTurma('1B ROB')">1B ROB</button>
+            <button class="btn-turma" onclick="selecionarTurma('2B ROB')">2B ROB</button>
+            <button class="btn-turma" onclick="selecionarTurma('3B ROB')">3B ROB</button>
+            <button class="btn-turma" onclick="selecionarTurma('8B')">8B</button>
+            <button class="btn-turma" onclick="selecionarTurma('1A')">1A</button>
+            <button class="btn-turma" onclick="selecionarTurma('1B')">1B</button>
+            <button class="btn-turma" onclick="selecionarTurma('2A')">2A</button>
+            <button class="btn-turma" onclick="selecionarTurma('2B')">2B</button>
+            <button class="btn-turma" onclick="selecionarTurma('3A')">3A</button>
+            <button class="btn-turma" onclick="selecionarTurma('3B')">3B</button>
+        </div>
+    </div>
+
+    <div id="area-sistema" style="display: none;">
+        <div class="header-info">
+            <span id="label-turma-ativa" style="font-weight: bold; font-size: 1.2em;">---</span>
+            <button onclick="location.reload()" style="background:none; border:1px solid white; color:white; cursor:pointer; padding: 5px 15px; border-radius:4px;">🔄 Trocar Turma</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('registro', event)">Notas</button>
+            <button class="tab-btn" onclick="showTab('ocorrencias', event)">Ocorrências</button>
+            <button class="tab-btn" onclick="showTab('relatorio', event)">Relatórios</button>
+            <button class="tab-btn" onclick="showTab('diario', event)">Diário</button>
+            <button class="tab-btn" onclick="showTab('admin', event)">ADM</button>
+        </div>
+
+        <div id="registro" class="section active">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <select id="sel-bimestre-reg" onchange="salvarBimestre(this.value)"></select>
+                <select id="select-ativ-registro"></select>
+                <input type="text" id="input-cod" placeholder="Aguardando cartão..." autofocus autocomplete="off">
+            </div>
+            <table><thead><tr id="header-grade"><th>Aluno</th></tr></thead><tbody id="body-grade"></tbody></table>
+        </div>
+
+        <div id="ocorrencias" class="section">
+            <table><thead><tr><th style="width:25%">Aluno</th><th>Ações Rápidas</th></tr></thead><tbody id="body-btn-ocorrencias"></tbody></table>
+        </div>
+
+        <div id="relatorio" class="section">
+            <div class="dashboard-cards">
+                <div class="card card-danger" id="card-atencao"><h4>Atenção</h4><p>0 Alunos</p></div>
+                <div class="card card-warning" id="card-baixa-entrega"><h4>Baixa Entrega</h4><p>0 Alunos</p></div>
+                <div class="card card-success" id="card-destaque"><h4>Destaques</h4><p>0 Alunos</p></div>
+            </div>
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                <div style="flex: 1;"><canvas id="chartOcorrencias"></canvas></div>
+                <div style="flex: 1;"><canvas id="chartProgresso"></canvas></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Relatório de Notas</h3>
+                <button onclick="exportarPDFCompleto()" style="background:#0284c7; color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">📄 Exportar PDF</button>
+            </div>
+            <table id="tabela-relatorio-notas"><thead><tr id="header-relatorio-notas"><th>Aluno</th></tr></thead><tbody id="body-relatorio-notas"></tbody></table>
+            <h3>Resumo de Ocorrências</h3>
+            <table id="tabela-resumo-final">
+                <thead><tr><th>Aluno</th><th>Atrapalhou</th><th>Sem Lição</th><th>Sem Tarefa</th><th>Agressão</th><th>Desrespeito</th><th>Sem Material</th><th>Fraude</th><th>Celular</th><th>Dormiu</th><th>Total</th><th class="no-pdf">Reset</th></tr></thead>
+                <tbody id="body-resumo-ocorrencias"></tbody>
+            </table>
+        </div>
+
+        <div id="diario" class="section">
+            <h4>📅 Diário de Bordo</h4>
+            <textarea id="txt-diario" rows="3" placeholder="O que foi trabalhado hoje?"></textarea>
+            <button onclick="salvarDiario()" style="background:var(--success); color:white; border:none; padding:12px; width:100%; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:5px;">💾 Salvar no Diário</button>
+            <hr style="margin: 20px 0;">
+            <div class="diario-list" id="lista-diario"></div>
+        </div>
+
+        <div id="admin" class="section">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>Alunos</h4>
+                    <input type="text" id="new-nome" placeholder="Nome">
+                    <input type="text" id="new-cod" placeholder="Código">
+                    <button onclick="cadastrarAluno()" style="background:var(--success); color:white; border:none; padding:10px; width:100%; border-radius:4px; cursor:pointer; font-weight:bold;">Salvar Aluno</button>
+                    <hr>
+                    <label>Importar via CSV:</label>
+                    <input type="file" id="csvFile" accept=".csv">
+                    <button onclick="importarCSV()" style="background:#6366f1; color:white; border:none; padding:10px; width:100%; border-radius:4px; cursor:pointer; margin-top:5px;">Processar CSV</button>
+                    <div class="admin-list" id="adm-lista-alunos" style="margin-top:15px;"></div>
+                </div>
+                <div>
+                    <h4>Atividades</h4>
+                    <input type="text" id="new-ativ" placeholder="Título">
+                    <button onclick="cadastrarAtividade()" style="background:var(--success); color:white; border:none; padding:10px; width:100%; border-radius:4px; cursor:pointer; font-weight:bold;">Criar Atividade</button>
+                    <div class="admin-list" id="adm-lista-ativs" style="margin-top:15px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAXeJ1B2IJAbOo7eUIla4_nAn86wVNLHVE",
+  authDomain: "registrosala.firebaseapp.com",
+  projectId: "registrosala",
+  storageBucket: "registrosala.firebasestorage.app",
+  messagingSenderId: "172799882750",
+  appId: "1:172799882750:web:4b5eeac5d456393621fcaf",
+  measurementId: "G-FXS611JDV3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let turmaAtiva = "";
+let listaAlunos = {};
+let cacheAtividades = [];
+let chart1, chart2;
+
+// LISTA DE OCORRÊNCIAS (Atualizada com Dormiu em Sala)
+const tiposOcorrencia = [
+    { n: "Atrapalhou", c: "oc-1" }, { n: "Sem Lição", c: "oc-2" }, { n: "Sem Tarefa", c: "oc-3" },
+    { n: "Agressão", c: "oc-4" }, { n: "Desrespeito", c: "oc-5" }, { n: "Sem Material", c: "oc-6" },
+    { n: "Fraude em Prova", c: "oc-7" }, { n: "Uso de Celular", c: "oc-8" },
+    { n: "Dormiu em sala", c: "oc-9" }
+];
+
+function selecionarTurma(t) {
+    turmaAtiva = t;
+    document.getElementById('tela-selecao-turma').style.display = "none";
+    document.getElementById('area-sistema').style.display = "block";
+    document.getElementById('label-turma-ativa').innerText = "Turma: " + t;
+    
+    const salvo = localStorage.getItem('bim_pref') || "1";
+    document.getElementById('sel-bimestre-reg').innerHTML = `<option value="1">1º B</option><option value="2">2º B</option><option value="3">3º B</option><option value="4">4º B</option>`;
+    document.getElementById('sel-bimestre-reg').value = salvo;
+
+    db.collection("atividades").onSnapshot(snap => {
+        cacheAtividades = []; snap.forEach(doc => cacheAtividades.push({ id: doc.id, ...doc.data() }));
+        refresh();
+    });
+    db.collection("alunos").where("turma", "==", t).onSnapshot(snap => {
+        listaAlunos = {}; snap.forEach(doc => { listaAlunos[doc.data().cod] = doc.data().nome; });
+        renderAdminAlunos(); renderBtnOcs(); refresh();
+    });
+    carregarDiario();
+}
+
+function refresh() { renderGrade(); renderRelatorioNotas(); renderResumoOcs(); renderAdminAtivs(); }
+
+// DIÁRIO (Ordenação via JS para evitar falha de índice)
+async function salvarDiario() {
+    const texto = document.getElementById('txt-diario').value.trim();
+    if(!texto) return;
+    await db.collection("diario").add({ turma: turmaAtiva, texto: texto, data: new Date().toLocaleDateString('pt-BR'), timestamp: Date.now() });
+    document.getElementById('txt-diario').value = "";
+}
+
+function carregarDiario() {
+    db.collection("diario").where("turma", "==", turmaAtiva).onSnapshot(snap => {
+        const div = document.getElementById('lista-diario'); div.innerHTML = "";
+        const regs = []; snap.forEach(doc => regs.push({ id: doc.id, ...doc.data() }));
+        regs.sort((a, b) => b.timestamp - a.timestamp);
+        if(regs.length === 0) div.innerHTML = "<p style='text-align:center; color:#999;'>Nenhum registro ainda.</p>";
+        regs.forEach(d => {
+            div.innerHTML += `<div class="diario-card"><div class="diario-content"><span class="diario-date">${d.data}</span><span>${d.texto}</span></div><button onclick="del('diario','${d.id}')" style="border:none; background:none; color:red; cursor:pointer; font-size:1.2em;">&times;</button></div>`;
+        });
+    });
+}
+
+// IMPORTAÇÃO CSV
+async function importarCSV() {
+    const file = document.getElementById('csvFile').files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const linhas = e.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+        for(let i = 0; i < linhas.length; i++) {
+            if(i === 0 && (linhas[i].toLowerCase().includes("nome"))) continue;
+            let cols = linhas[i].split(/[,;]/);
+            if(cols.length >= 2) {
+                const n = cols[0].trim(); const c = cols[1].trim();
+                if(n && c) await db.collection("alunos").doc(c).set({ nome: n, cod: c, turma: turmaAtiva });
+            }
+        }
+        alert("Concluído!");
+    };
+    reader.readAsText(file);
+}
+
+// RENDERIZAÇÃO DE TABELAS
+function renderGrade() {
+    const bim = document.getElementById('sel-bimestre-reg').value;
+    const ativs = cacheAtividades.filter(a => a.turma === turmaAtiva && a.bimestre === bim);
+    db.collection("registros").where("turma", "==", turmaAtiva).where("bimestre", "==", bim).onSnapshot(snap => {
+        const regs = []; snap.forEach(doc => regs.push({id: doc.id, ...doc.data()}));
+        document.getElementById('header-grade').innerHTML = "<th>Aluno</th>" + ativs.map(a => `<th>${a.nome}</th>`).join('');
+        const tbody = document.getElementById('body-grade'); tbody.innerHTML = "";
+        Object.keys(listaAlunos).sort((a,b)=>listaAlunos[a].localeCompare(listaAlunos[b])).forEach(cod => {
+            let row = `<td style="text-align:left">${listaAlunos[cod]}</td>`;
+            ativs.forEach(a => {
+                const r = regs.find(reg => reg.cod === cod && reg.ativ === a.nome);
+                row += `<td>${r ? `<span class="check-click" onclick="del('registros','${r.id}')">✅</span>` : '-'}</td>`;
+            });
+            tbody.innerHTML += `<tr>${row}</tr>`;
+        });
+        const sel = document.getElementById('select-ativ-registro');
+        const prev = sel.value;
+        sel.innerHTML = ativs.map(a => `<option value="${a.nome}">${a.nome}</option>`).join('');
+        if(prev && ativs.some(a => a.nome === prev)) sel.value = prev;
+    });
+}
+
+function renderRelatorioNotas() {
+    const bim = document.getElementById('sel-bimestre-reg').value;
+    const ativs = cacheAtividades.filter(a => a.turma === turmaAtiva && a.bimestre === bim);
+    db.collection("registros").where("turma", "==", turmaAtiva).where("bimestre", "==", bim).onSnapshot(snap => {
+        const regs = []; snap.forEach(doc => regs.push(doc.data()));
+        document.getElementById('header-relatorio-notas').innerHTML = "<th>Aluno</th>" + ativs.map(a => `<th>${a.nome}</th>`).join('') + "<th>Nota</th>";
+        const tbody = document.getElementById('body-relatorio-notas'); tbody.innerHTML = "";
+        let somaN = 0, totalA = 0, baixaE = 0, dest = 0;
+        Object.keys(listaAlunos).sort((a,b)=>listaAlunos[a].localeCompare(listaAlunos[b])).forEach(cod => {
+            let row = `<td style="text-align:left">${listaAlunos[cod]}</td>`;
+            let feitos = 0;
+            ativs.forEach(a => { if(regs.find(r => r.cod === cod && r.ativ === a.nome)) feitos++; row += `<td>${regs.find(r => r.cod === cod && r.ativ === a.nome) ? '10' : '0'}</td>`; });
+            const nota = ativs.length > 0 ? ((feitos / ativs.length) * 10).toFixed(1) : "0.0";
+            if(parseFloat(nota) < 5) baixaE++; if(parseFloat(nota) >= 9) dest++;
+            row += `<td style="font-weight:bold; background:#f1f5f9">${nota}</td>`;
+            tbody.innerHTML += `<tr>${row}</tr>`;
+            somaN += parseFloat(nota); totalA++;
+        });
+        document.getElementById('card-baixa-entrega').innerHTML = `<h4>Baixa Entrega</h4><p>${baixaE} Alunos</p>`;
+        document.getElementById('card-destaque').innerHTML = `<h4>Destaques</h4><p>${dest} Alunos</p>`;
+        atualizarGraficoProgresso(totalA > 0 ? (somaN/totalA).toFixed(1) : 0);
+    });
+}
+
+function renderResumoOcs() {
+    db.collection("ocorrencias").where("turma", "==", turmaAtiva).onSnapshot(snap => {
+        const ocs = []; snap.forEach(d => ocs.push(d.data()));
+        const tbody = document.getElementById('body-resumo-ocorrencias'); tbody.innerHTML = "";
+        let criticos = 0; let contagem = {};
+        Object.keys(listaAlunos).sort((a,b)=>listaAlunos[a].localeCompare(listaAlunos[b])).forEach(cod => {
+            let row = `<td style="text-align:left"><b>${listaAlunos[cod]}</b></td>`;
+            let total = 0;
+            tiposOcorrencia.forEach(t => { 
+                const qtd = ocs.filter(o => o.cod === cod && o.tipo === t.n).length; 
+                total += qtd; row += `<td>${qtd || '-'}</td>`;
+                contagem[t.n] = (contagem[t.n] || 0) + qtd;
+            });
+            if(total >= 3) criticos++;
+            tbody.innerHTML += `<tr>${row}<td style="background:#fee2e2; font-weight:bold">${total}</td><td class="no-pdf"><button class="btn-reset" onclick="zerarOcs('${cod}')">🗑️</button></td></tr>`;
+        });
+        document.getElementById('card-atencao').innerHTML = `<h4>Atenção</h4><p>${criticos} Alunos</p>`;
+        atualizarGraficoOcorrencias(contagem);
+    });
+}
+
+// GRÁFICOS
+function atualizarGraficoOcorrencias(dados) {
+    const ctx = document.getElementById('chartOcorrencias').getContext('2d');
+    if(chart1) chart1.destroy();
+    chart1 = new Chart(ctx, { type: 'bar', data: { labels: Object.keys(dados), datasets: [{ label: 'Ocorrências', data: Object.values(dados), backgroundColor: '#6366f1' }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+}
+
+function atualizarGraficoProgresso(media) {
+    const ctx = document.getElementById('chartProgresso').getContext('2d');
+    if(chart2) chart2.destroy();
+    chart2 = new Chart(ctx, { type: 'doughnut', data: { labels: ['Média', 'Faltante'], datasets: [{ data: [media, 10 - media], backgroundColor: ['#10b981', '#e2e8f0'] }] }, options: { cutout: '70%', plugins: { title: { display: true, text: 'Saúde da Turma' } } } });
+}
+
+// ADMIN
+function renderAdminAlunos() {
+    const div = document.getElementById('adm-lista-alunos'); div.innerHTML = "";
+    Object.keys(listaAlunos).sort((a,b)=>listaAlunos[a].localeCompare(listaAlunos[b])).forEach(cod => {
+        div.innerHTML += `<div class="admin-item"><span onclick="prepararEdicaoAluno('${listaAlunos[cod]}','${cod}')">${cod} - ${listaAlunos[cod]}</span><button onclick="del('alunos','${cod}')" style="border:none; background:none; color:red; cursor:pointer;">x</button></div>`;
+    });
+}
+
+function renderAdminAtivs() {
+    const div = document.getElementById('adm-lista-ativs'); div.innerHTML = "";
+    cacheAtividades.filter(a => a.turma === turmaAtiva).forEach(a => {
+        div.innerHTML += `<div class="admin-item"><span>[B${a.bimestre}] ${a.nome}</span><button onclick="del('atividades','${a.id}')" style="border:none; background:none; color:red; cursor:pointer;">x</button></div>`;
+    });
+}
+
+function renderBtnOcs() {
+    const tbody = document.getElementById('body-btn-ocorrencias'); tbody.innerHTML = "";
+    Object.keys(listaAlunos).sort((a,b)=>listaAlunos[a].localeCompare(listaAlunos[b])).forEach(cod => {
+        let bts = ""; tiposOcorrencia.forEach(t => bts += `<button class="btn-oc ${t.c}" onclick="regOc('${cod}','${t.n}')">${t.n}</button>`);
+        tbody.innerHTML += `<tr><td style="text-align:left"><b>${listaAlunos[cod]}</b></td><td>${bts}</td></tr>`;
+    });
+}
+
+async function cadastrarAluno() { const n = document.getElementById('new-nome').value; const c = document.getElementById('new-cod').value; if(n && c) await db.collection("alunos").doc(c).set({nome:n, cod:c, turma:turmaAtiva}); document.getElementById('new-nome').value = ""; document.getElementById('new-cod').value = ""; }
+async function cadastrarAtividade() { const n = document.getElementById('new-ativ').value; const b = document.getElementById('sel-bimestre-reg').value; if(n) await db.collection("atividades").add({nome:n, turma:turmaAtiva, bimestre:b}); document.getElementById('new-ativ').value = ""; }
+async function regOc(cod, tipo) { if(confirm(`Marcar ${tipo}?`)) await db.collection("ocorrencias").add({ cod, turma: turmaAtiva, tipo, data: new Date().toLocaleDateString('pt-BR') }); }
+async function zerarOcs(cod) { if(confirm("Apagar todas as ocorrências deste aluno?")) { const s = await db.collection("ocorrencias").where("turma","==",turmaAtiva).where("cod","==",cod).get(); const b = db.batch(); s.forEach(d => b.delete(d.ref)); await b.commit(); } }
+async function del(c, id) { if(confirm("Excluir definitivamente?")) await db.collection(c).doc(id).delete(); }
+function prepararEdicaoAluno(n, c) { document.getElementById('new-nome').value = n; document.getElementById('new-cod').value = c; document.getElementById('new-cod').focus(); }
+function showTab(id, e) { document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); e.target.classList.add('active'); }
+function salvarBimestre(v) { localStorage.setItem('bim_pref', v); refresh(); }
+
+function exportarPDFCompleto() {
+    const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'mm', 'a4');
+    doc.text(`Relatório Turma ${turmaAtiva}`, 14, 15);
+    doc.autoTable({ html: '#tabela-relatorio-notas', startY: 20, theme: 'grid' });
+    doc.autoTable({ html: '#tabela-resumo-final', startY: doc.lastAutoTable.finalY + 10, theme: 'grid', columnStyles: { 11: { display: 'none' } } });
+    doc.save(`Relatorio_${turmaAtiva}.pdf`);
+}
+
+// LEITOR DE CARTÃO
+document.getElementById('input-cod').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+        const campo = e.target;
+        const cod = campo.value.trim(); 
+        const ativ = document.getElementById('select-ativ-registro').value;
+        const bim = document.getElementById('sel-bimestre-reg').value;
+        if(cod && listaAlunos[cod] && ativ) {
+            await db.collection("registros").add({ cod, ativ, turma: turmaAtiva, bimestre: bim });
+            campo.value = ""; campo.focus();
+        } else if (cod) {
+            alert("Não encontrado!"); campo.value = "";
+        }
+    }
+});
+</script>
+</body>
+</html>
