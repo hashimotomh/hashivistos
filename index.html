@@ -3,128 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta de Notas - Robótica</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <title>OE Matemática - 3º Ano</title>
     <style>
-        :root { --primary: #2563eb; --bg: #f1f5f9; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
-        .card-consulta { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { color: var(--primary); text-align: center; margin-top: 0; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
-        input:focus { border-color: var(--primary); }
-        button { padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .resultado { display: none; margin-top: 20px; border-top: 2px solid #eee; padding-top: 20px; }
-        .info-aluno { margin-bottom: 15px; }
-        .info-aluno b { color: #1e293b; font-size: 1.1em; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
-        .check { color: #10b981; font-weight: bold; }
-        .pendente { color: #ef4444; }
-        .nota-final { text-align: center; margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; font-size: 1.2em; font-weight: bold; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
+        h2 { text-align: center; color: #1a73e8; margin-bottom: 5px; }
+        #status-carga { text-align: center; font-size: 0.8em; color: #666; margin-bottom: 10px; }
+        .container { max-width: 600px; margin: auto; padding-bottom: 100px; }
+        .aluno-card { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h3 { margin: 0 0 10px 0; color: #333; font-size: 0.9rem; border-bottom: 1px solid #eee; }
+        .grid-botoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+        button { 
+            padding: 10px 5px; border: 1px solid #ddd; border-radius: 8px; 
+            background: #f8f9fa; cursor: pointer; font-size: 0.7rem;
+        }
+        button.active { background: #34a853; color: white; border-color: #2d8e47; font-weight: bold; }
+        .btn-salvar { 
+            position: fixed; bottom: 20px; right: 20px; width: 70px; height: 70px; 
+            border-radius: 50%; background: #1a73e8; color: white; border: none; 
+            font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 100;
+        }
     </style>
 </head>
 <body>
 
-<div class="card-consulta">
-    <h2>🚀 Portal do Aluno</h2>
-    <p style="text-align: center; color: #64748b; font-size: 0.9em;">Digite seu código para ver seu progresso.</p>
-    
-    <div class="input-group">
-        <input type="text" id="cod-aluno" placeholder="Seu código (Ex: 101)" onkeypress="if(event.key==='Enter') buscarNotas()">
-        <button onclick="buscarNotas()">Ver</button>
-    </div>
-
-    <div id="resultado" class="resultado">
-        <div class="info-aluno">
-            <span>Aluno: </span><b id="nome-exibicao">---</b><br>
-            <span>Turma: </span><span id="turma-exibicao">---</span>
-        </div>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Atividade</th>
-                    <th style="text-align: center;">Status</th>
-                </tr>
-            </thead>
-            <tbody id="lista-atividades"></tbody>
-        </table>
-
-        <div class="nota-final" id="media-exibicao">Média: 0.0</div>
+    <div class="container">
+        <h2>Registro Diário</h2>
+        <div id="status-carga">Sincronizando com Firebase...</div>
+        <div id="lista-alunos"></div>
     </div>
     
-    <div id="msg-erro" style="color: #ef4444; text-align: center; display: none; margin-top: 10px;">Código não encontrado.</div>
-</div>
+    <button class="btn-salvar" onclick="enviarDados()">SALVAR</button>
 
-<script>
-// --- CONFIGURAÇÃO (Use a mesma do seu sistema) ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAXeJ1B2IJAbOo7eUIla4_nAn86wVNLHVE",
-  authDomain: "registrosala.firebaseapp.com",
-  projectId: "registrosala",
-  storageBucket: "registrosala.firebasestorage.app",
-  messagingSenderId: "172799882750",
-  appId: "1:172799882750:web:4b5eeac5d456393621fcaf",
-  measurementId: "G-FXS611JDV3"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-async function buscarNotas() {
-    const cod = document.getElementById('cod-aluno').value.trim();
-    const resDiv = document.getElementById('resultado');
-    const erroDiv = document.getElementById('msg-erro');
-    
-    if(!cod) return;
-
-    // 1. Buscar dados do Aluno
-    const alunoSnap = await db.collection("alunos").doc(cod).get();
-    
-    if(!alunoSnap.exists) {
-        resDiv.style.display = "none";
-        erroDiv.style.display = "block";
-        return;
-    }
-
-    erroDiv.style.display = "none";
-    const aluno = alunoSnap.data();
-    document.getElementById('nome-exibicao').innerText = aluno.nome;
-    document.getElementById('turma-exibicao').innerText = aluno.turma;
-
-    // 2. Buscar Atividades daquela Turma
-    const ativsSnap = await db.collection("atividades").where("turma", "==", aluno.turma).get();
-    let atividades = [];
-    ativsSnap.forEach(doc => atividades.push(doc.data()));
-
-    // 3. Buscar Registros (Notas) do Aluno
-    const regsSnap = await db.collection("registros").where("cod", "==", cod).get();
-    let registros = [];
-    regsSnap.forEach(doc => registros.push(doc.data().ativ));
-
-    // 4. Renderizar Tabela
-    const tbody = document.getElementById('lista-atividades');
-    tbody.innerHTML = "";
-    let realizados = 0;
-
-    atividades.forEach(ativ => {
-        const feito = registros.includes(ativ.nome);
-        if(feito) realizados++;
+    <script>
+        const URL_BASE = "https://oe-acompanhamento-default-rtdb.firebaseio.com/turma_3ano/"; // <--- COLOQUE SUA URL AQUI
+        const dataAtual = new Date().toISOString().split('T')[0];
         
-        tbody.innerHTML += `
-            <tr>
-                <td>${ativ.nome}</td>
-                <td style="text-align: center;">${feito ? '<span class="check">✅ Feito</span>' : '<span class="pendente">❌ Pendente</span>'}</td>
-            </tr>
-        `;
-    });
+        const alunos = [
+            "AMANDA EVELLYN DE SOUSA MATIAS BENTES", "ANA CRISTINA DA SILVA PIRES", "ANA LAURA VITAL ALVES",
+            "ANDRIELLY SERRA SOUZA", "ANNA LUIZA MARTINS DA SILVA", "ASAFE BRAGA SANTOS REIS",
+            "BEATRIZ ALVES SIMÕES DE OLIVEIRA", "EDUARDO DOS SANTOS ALVES", "EMANUELLE SIMAROLI ALQUINO",
+            "EMILY LEONEL DINIZ", "ESTHER VICTORIA FERRETI MIGUEL", "EVELLYN HELOYSE PEREIRA RAULINO",
+            "GABRIEL CORREA TAVARES", "GABRIEL RIBEIRO GONCALVES", "GUILHERME CUSTODIO CAÇÃO",
+            "JANÁIRA DO NASCIMENTO BARROSO", "JENIFFER PORTELA MUNHOZ", "JOÃO VICTOR MARQUES",
+            "JÚLIA EDUARDA NUNES", "JULIA MOREIRA MANENTE", "KAIKY PEREIRA ROCHA",
+            "KAUA HENRIQUE FERREIRA DA SILVA", "LARISSI NAYARA VIEIRA GONCALVES", "LETICIA DE SOUZA DURAES",
+            "LUCAS DE FREITAS SANTOS", "MARIA CLARA ALVES DA ROCHA SOUZA", "MARIA EDUARDA DUTRA DA SILVA",
+            "MARIA EDUARDA PADILHA DE SOUSA", "MARIA ELOIZA FROES DE ARAUJO", "RAFAELA CORREA SILVA",
+            "RICARDO VIEIRA CARDOSO DA SILVA", "RYAN DE ALBUQUERQUE SILVA", "SAMUEL SMITH SILVA MENDES",
+            "SARA BIANCHIM DA ROSA", "TAINA TRINDADE DE JESUS", "THOMAS DE BRITO SELBACH DOS SANTOS",
+            "VANESSA SILVA DE OLIVEIRA", "YASMIN AMORIM ALVES", "YASMIN GARCIA DE PAULO", "YASMIN RACKELLY DE ALMEIDA MOTA"
+        ];
 
-    const media = atividades.length > 0 ? ((realizados / atividades.length) * 10).toFixed(1) : "0.0";
-    document.getElementById('media-exibicao').innerText = `Média: ${media}`;
-    resDiv.style.display = "block";
-}
-</script>
+        const ocorrencias = ["Livro", "Exercícios", "Conversa", "Combinados", "Respeito", "Dúvida", "Difícil"];
+        const registro = {};
+        const botoesMap = {}; // Para encontrar os botões facilmente na hora de marcar
 
+        // 1. Criar a Interface
+        const container = document.getElementById('lista-alunos');
+        alunos.sort().forEach(nome => {
+            registro[nome] = {};
+            botoesMap[nome] = {};
+            
+            const div = document.createElement('div');
+            div.className = 'aluno-card';
+            div.innerHTML = `<h3>${nome}</h3><div class="grid-botoes"></div>`;
+            const grid = div.querySelector('.grid-botoes');
+            
+            ocorrencias.forEach(oc => {
+                registro[nome][oc] = false;
+                const btn = document.createElement('button');
+                btn.innerText = oc;
+                btn.onclick = () => {
+                    registro[nome][oc] = !registro[nome][oc];
+                    btn.classList.toggle('active');
+                };
+                grid.appendChild(btn);
+                botoesMap[nome][oc] = btn;
+            });
+            container.appendChild(div);
+        });
+
+        // 2. Função para ler dados já salvos hoje
+        async function carregarDadosDoDia() {
+            try {
+                const response = await fetch(`${URL_BASE}/turma_3ano/${dataAtual}.json`);
+                const dados = await response.json();
+                
+                if (dados) {
+                    for (let nome in dados) {
+                        if (registro[nome]) {
+                            for (let oc in dados[nome]) {
+                                if (dados[nome][oc] === true) {
+                                    registro[nome][oc] = true;
+                                    botoesMap[nome][oc].classList.add('active');
+                                }
+                            }
+                        }
+                    }
+                    document.getElementById('status-carga').innerText = `Dados de hoje (${dataAtual}) carregados!`;
+                } else {
+                    document.getElementById('status-carga').innerText = "Nenhum registro hoje. Iniciando limpo.";
+                }
+            } catch (e) {
+                document.getElementById('status-carga').innerText = "Erro ao sincronizar. Verifique a internet.";
+            }
+        }
+
+        // 3. Salvar
+        async function enviarDados() {
+            const URL = `${URL_BASE}/turma_3ano/${dataAtual}.json`;
+            try {
+                const response = await fetch(URL, {
+                    method: 'PUT',
+                    body: JSON.stringify(registro)
+                });
+                if(response.ok) alert("Salvo com sucesso!");
+            } catch (e) {
+                alert("Erro ao salvar!");
+            }
+        }
+
+        // Iniciar carregando dados
+        carregarDadosDoDia();
+    </script>
 </body>
 </html>
