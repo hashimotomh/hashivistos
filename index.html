@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OE Matemática - 3º Ano</title>
+    <title>OE Matemática - Completo</title>
     <style>
         body { font-family: sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
-        h2 { text-align: center; color: #1a73e8; margin-bottom: 5px; }
-        #status-carga { text-align: center; font-size: 0.8em; color: #666; margin-bottom: 10px; }
+        .topo-fixo { position: sticky; top: 0; background: #f0f2f5; padding: 10px 0; z-index: 99; border-bottom: 1px solid #ddd; }
+        h2 { text-align: center; color: #1a73e8; margin: 0 0 10px 0; font-size: 1.4rem; }
+        select { width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; font-weight: bold; color: #1a73e8; margin-bottom: 10px; box-sizing: border-box; }
+        textarea { width: 100%; height: 60px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: sans-serif; font-size: 0.9rem; resize: none; box-sizing: border-box; display: block; margin-bottom: 5px; }
+        #status-carga { text-align: center; font-size: 0.85rem; color: #666; margin: 5px 0; font-weight: 500; }
         .container { max-width: 600px; margin: auto; padding-bottom: 100px; }
         .aluno-card { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h3 { margin: 0 0 10px 0; color: #333; font-size: 0.9rem; border-bottom: 1px solid #eee; }
+        .aluno-card.faltou { background: #ffebee; border-left: 5px solid #d32f2f; }
+        h3 { margin: 0 0 10px 0; color: #333; font-size: 0.9rem; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .grid-botoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
-        button { 
-            padding: 10px 5px; border: 1px solid #ddd; border-radius: 8px; 
-            background: #f8f9fa; cursor: pointer; font-size: 0.7rem;
-        }
+        button { padding: 10px 5px; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa; cursor: pointer; font-size: 0.7rem; }
         button.active { background: #34a853; color: white; border-color: #2d8e47; font-weight: bold; }
+        button.active-falta { background: #d32f2f; color: white; border-color: #b71c1c; font-weight: bold; }
         .btn-salvar { 
             position: fixed; bottom: 20px; right: 20px; width: 70px; height: 70px; 
             border-radius: 50%; background: #1a73e8; color: white; border: none; 
@@ -27,8 +29,18 @@
 <body>
 
     <div class="container">
-        <h2>Registro Diário</h2>
-        <div id="status-carga">Sincronizando com Firebase...</div>
+        <div class="topo-fixo">
+            <h2>Orientação de Estudos</h2>
+            <select id="seletor-turma" onchange="mudarTurma()">
+                <option value="turma_1F">1F</option>
+                <option value="turma_2H">2H</option>
+                <option value="turma_2I">2I</option>
+                <option value="turma_3D">3D</option>
+            </select>
+            <textarea id="conteudo-aula" placeholder="Digite aqui o conteúdo ministrado hoje..."></textarea>
+            <div id="status-carga">Sincronizando com Firebase...</div>
+        </div>
+        
         <div id="lista-alunos"></div>
     </div>
     
@@ -36,94 +48,154 @@
 
     <script>
         const URL_BASE = "https://oe-acompanhamento-default-rtdb.firebaseio.com/turma_3ano/"; // <--- COLOQUE SUA URL AQUI
-        const dataAtual = new Date().toISOString().split('T')[0];
         
-        const alunos = [
-            "AMANDA EVELLYN DE SOUSA MATIAS BENTES", "ANA CRISTINA DA SILVA PIRES", "ANA LAURA VITAL ALVES",
-            "ANDRIELLY SERRA SOUZA", "ANNA LUIZA MARTINS DA SILVA", "ASAFE BRAGA SANTOS REIS",
-            "BEATRIZ ALVES SIMÕES DE OLIVEIRA", "EDUARDO DOS SANTOS ALVES", "EMANUELLE SIMAROLI ALQUINO",
-            "EMILY LEONEL DINIZ", "ESTHER VICTORIA FERRETI MIGUEL", "EVELLYN HELOYSE PEREIRA RAULINO",
-            "GABRIEL CORREA TAVARES", "GABRIEL RIBEIRO GONCALVES", "GUILHERME CUSTODIO CAÇÃO",
-            "JANÁIRA DO NASCIMENTO BARROSO", "JENIFFER PORTELA MUNHOZ", "JOÃO VICTOR MARQUES",
-            "JÚLIA EDUARDA NUNES", "JULIA MOREIRA MANENTE", "KAIKY PEREIRA ROCHA",
-            "KAUA HENRIQUE FERREIRA DA SILVA", "LARISSI NAYARA VIEIRA GONCALVES", "LETICIA DE SOUZA DURAES",
-            "LUCAS DE FREITAS SANTOS", "MARIA CLARA ALVES DA ROCHA SOUZA", "MARIA EDUARDA DUTRA DA SILVA",
-            "MARIA EDUARDA PADILHA DE SOUSA", "MARIA ELOIZA FROES DE ARAUJO", "RAFAELA CORREA SILVA",
-            "RICARDO VIEIRA CARDOSO DA SILVA", "RYAN DE ALBUQUERQUE SILVA", "SAMUEL SMITH SILVA MENDES",
-            "SARA BIANCHIM DA ROSA", "TAINA TRINDADE DE JESUS", "THOMAS DE BRITO SELBACH DOS SANTOS",
-            "VANESSA SILVA DE OLIVEIRA", "YASMIN AMORIM ALVES", "YASMIN GARCIA DE PAULO", "YASMIN RACKELLY DE ALMEIDA MOTA"
-        ];
+        function obterDataLocal() {
+            const agora = new Date();
+            const dataBr = agora.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const partes = dataBr.split('/');
+            return `${partes[2]}-${partes[1]}-${partes[0]}`;
+        }
 
-        const ocorrencias = ["Livro", "Exercícios", "Conversa", "Combinados", "Respeito", "Dúvida", "Difícil", "Celular"];
-        const registro = {};
-        const botoesMap = {}; // Para encontrar os botões facilmente na hora de marcar
+        const dataAtual = obterDataLocal();
+        
+        const turmas = {
+            "turma_1F": [
+                "ALANA MARQUES DA SILVA", "ALESSANDRO RICARDO DE DEUS BIANCHIM", "ALYSSON DE MELO BORGES", "ANA LUIZA DOS ANJOS SANTANA", "ANA SOPHIA SILVA DOMINGUES", "BEATRIZ WELLEN SANTOS VERNE", "BIANCA DA SILVA VILLA", "DAVI LUCCA ARANTES", "EDLLY ELOINI JESUS DE OLIVEIRA", "EVELLYN VICTORIA BUENO FRASSON", "FILIPE PEREIRA DA SILVA", "GABRIEL INACIO BUZANELI", "GIOVANNA COSTA SOUZA", "JENIFFER REIS DE ARAÚJO SILVA (GUSTAVO DE ARAUJO SILVA)", "GUSTAVO LUCAS FRANCELINO DA SILVA", "ISABELA DA SILVA CORRÊA PINTO", "ISABELLA CAMILY FERREIRA MARTINS", "ISABELLY LIMA FURLAN", "JOÃO VITOR DA COSTA SILVA", "KATHLEEN RIHANNA RODRIGUES CARDOSO", "KAUÃ VELONISQUI DOS SANTOS", "LARISSA GABRIELLY SILVA DE SANTANA", "LEONARDO DA SILVA MARTINS", "LEVI BRAGA SANTOS REIS", "LUCAS DA SILVA RODRIGUES", "LUCAS HENRIQUE SILVA GOMES", "MARCOS VINNICYUS DE SOUSA RODRIGUES", "SOPHIA GITIRANA VIEIRA SANTOS", "VICTOR DA CRUZ FRANCISCO", "WISLA ISABELLY CARVALHO DA SILVA", "YAGO HENRIQUE VIANNA PAULINO", "YASMIN ARAUJO PEREIRA"
+            ],
+            "turma_2H": [
+                "AMANDA SILVA LIMA SALDANHA RESENDE", "ANA BEATRIZ SANTOS CAVALCANTE", "ANA CLARA TOREZIN LOPES", "ANA LARA DE SOUZA SANTOS", "BRUNO ANTUNES AVANCI", "BRUNO OLIVEIRA GOMES", "CARLOS EDUARDO MACEDO AMOROZINO", "CÁSSIO ANDRADE SANTOS DE MORAES", "CRISTIANO PRADO FERREIRA DE BARROS", "DANIELE PEREIRA LIMA", "DANIELLA SILVA", "DHESSICA ADRIELE DO NASCIMENTO RIBEIRO", "DOUGLAS FLORIANO ROCHA", "EDUARDA DE SOUZA CAPELATTO", "EDUARDO LEMES CONTI", "ENZO GABRIEL VITALONE ROQUE", "GABRIEL SOUZA GOMES", "GIOVANNA DA SILVA ROCHA", "HENRIQUE MARQUES PEREIRA", "ISABELLA PEREIRA DA CUNHA", "ISABELLY LOPES GARCIA", "JAMILY DOS SANTOS NOGUEIRA", "JHENIFER AMSTALDEN DA SILVA", "JULIANO SIQUEIRA GOES SILVA", "JULIO CESAR RODRIGUES DE SOUZA", "LAYSLA SOUZA MATOS", "LEANDRO FABIO ANDRADE", "LETICIA FABIO ANDRADE", "MURILO ALVES DE OLIVEIRA", "NATALIA DA COSTA GOMES", "NICOLAS GABRIEL DA SILVA", "PABLO CAMARGO SCATENA", "PABLO LIMA DE OLIVEIRA", "PEDRO HENRIQUE MENDES DE SOUSA", "REBECCA DINIZ ESTEVAM", "RICHARD PAMPLONA", "VICTOR PAULO GUAIUME", "VITORIA DO NASCIMENTO FERREIRA LIMA", "YASMIN CHEREM CALEGIA", "YASMIN VICTORIA SOFIATI", "PEDRO HENRIQUE DA SILVA CUBA", "MARIA GABRIELA DIONIZIO DE ANDRADE", "YASMIN SCARABEL GRAEFF"
+            ],
+            "turma_2I": [
+                "ANA LAURA DOS SANTOS BATISTA", "BEATRIZ SUFFI", "CARLOS EDUARDO CARVALHO TARAMELLI LIMA", "CARLOS GABRIEL SANTOS OLIVEIRA", "CELINE DION DE OLIVEIRA PEREIRA DA SILVA", "EMANUEL PEDROSO SANTOS", "EVELLYN YSABELLY DIAS ALVES", "GABRIEL DA SILVA PORFIRIO", "GABRIEL DE CASTRO JORDÃO", "GABRIEL HENRIQUE SANCHES ALVES", "GABRIEL RODRIGUES DE CASTRO", "GABRIELLY SOUZA DO ESPIRITO SANTO", "GABRIELY EDUARDA SOUZA DA SILVA", "GEOVANI GABRIEL FARIAS DUTRA", "GUILHERME MÁRTINS DE OLIVEIRA", "GUSTAVO PACHECO DE ALMEIDA", "HELOÍSA PIRES", "HEROS HENRIQUE LIMA DOS SANTOS", "HIGOR DA SILVA", "ISABELI TOLEDO CHEREM DA SILVA", "ISABELY SILVA PROENÇA", "JHONATAN HENRIQUE MARCIANO SANTOS", "KEILA DE JESUS SANTOS", "LETÍCIA FERREIRA DA SILVA", "LUAN SOUZA NEVES", "MAIRA GABRIELA GOMES", "MARIA DE LOURDES CAMPOS DA SILVA", "MAYKE DIONIZIO MEDEIROS DOS SANTOS", "MAYUMI SUGAWARA DOS SANTOS", "MOISES DE CARVALHO CAMPOS", "PABLO SILVA AMARAL", "RUAN DA SILVA FIDELES", "SUSAN ELLEN DE AZEVEDO LIMA", "TIAGO PITES SILVA", "VITOR MANOEL SANTOS RAMOS", "VITORIA APARECIDA LEITE DOS SANTOS", "VITORIA REGINA FERREIRA DOS SANTOS", "INGRYD CARDOSO DA SILVA", "KAUAN LUZ DA SILVA", "LAIS CRISTINA ROBERTO DOS SANTOS", "MIGUEL PEREIRA DE LIMA", "ALINE ROCHA DE ARAUJO", "KAREN EMANUELLY SOARES DA ROCHA"
+            ],
+            "turma_3D": [
+                "AMANDA EVELLYN DE SOUSA MATIAS BENTES", "ANA CRISTINA DA SILVA PIRES", "ANA LAURA VITAL ALVES", "ANDRIELLY SERRA SOUZA", "ANNA LUIZA MARTINS DA SILVA", "ASAFE BRAGA SANTOS REIS", "BEATRIZ ALVES SIMÕES DE OLIVEIRA", "EDUARDO DOS SANTOS ALVES", "EMANUELLE SIMAROLI ALQUINO", "EMILY LEONEL DINIZ", "ESTHER VICTORIA FERRETI MIGUEL", "EVELLYN HELOYSE PEREIRA RAULINO", "GABRIEL CORREA TAVARES", "GABRIEL RIBEIRO GONCALVES", "GUILHERME CUSTODIO CAÇÃO", "JANÁIRA DO NASCIMENTO BARROSO", "JENIFFER PORTELA MUNHOZ", "JOÃO VICTOR MARQUES", "JÚLIA EDUARDA NUNES", "JULIA MOREIRA MANENTE", "KAIKY PEREIRA ROCHA", "KAUA HENRIQUE FERREIRA DA SILVA", "LARISSI NAYARA VIEIRA GONCALVES", "LETICIA DE SOUZA DURAES", "LUCAS DE FREITAS SANTOS", "MARIA CLARA ALVES DA ROCHA SOUZA", "MARIA EDUARDA DUTRA DA SILVA", "MARIA EDUARDA PADILHA DE SOUSA", "MARIA ELOIZA FROES DE ARAUJO", "RAFAELA CORREA SILVA", "RICARDO VIEIRA CARDOSO DA SILVA", "RYAN DE ALBUQUERQUE SILVA", "SAMUEL SMITH SILVA MENDES", "SARA BIANCHIM DA ROSA", "TAINA TRINDADE DE JESUS", "THOMAS DE BRITO SELBACH DOS SANTOS", "VANESSA SILVA DE OLIVEIRA", "YASMIN AMORIM ALVES", "YASMIN GARCIA DE PAULO", "YASMIN RACKELLY DE ALMEIDA MOTA"
+            ]
+        };
 
-        // 1. Criar a Interface
-        const container = document.getElementById('lista-alunos');
-        alunos.sort().forEach(nome => {
-            registro[nome] = {};
-            botoesMap[nome] = {};
-            
-            const div = document.createElement('div');
-            div.className = 'aluno-card';
-            div.innerHTML = `<h3>${nome}</h3><div class="grid-botoes"></div>`;
-            const grid = div.querySelector('.grid-botoes');
-            
-            ocorrencias.forEach(oc => {
-                registro[nome][oc] = false;
-                const btn = document.createElement('button');
-                btn.innerText = oc;
-                btn.onclick = () => {
-                    registro[nome][oc] = !registro[nome][oc];
-                    btn.classList.toggle('active');
-                };
-                grid.appendChild(btn);
-                botoesMap[nome][oc] = btn;
+        const ocorrencias = ["Livro", "Exercícios", "Conversa", "Combinados", "Respeito", "Dúvida", "Difícil", "Celular", "Falta"];
+        let registro = {};
+        let botoesMap = {};
+
+        function gerarInterface(turmaKey) {
+            const container = document.getElementById('lista-alunos');
+            container.innerHTML = ""; 
+            registro = {};
+            botoesMap = {};
+
+            const listaAlunos = turmas[turmaKey];
+            listaAlunos.sort((a, b) => a.localeCompare(b)).forEach(nome => {
+                registro[nome] = {};
+                botoesMap[nome] = {};
+                
+                const div = document.createElement('div');
+                div.className = 'aluno-card';
+                div.id = 'card-' + nome.replace(/\s+/g, '-');
+                div.innerHTML = `<h3>${nome}</h3><div class="grid-botoes"></div>`;
+                const grid = div.querySelector('.grid-botoes');
+                
+                ocorrencias.forEach(oc => {
+                    registro[nome][oc] = false;
+                    const btn = document.createElement('button');
+                    btn.innerText = oc;
+                    btn.onclick = () => {
+                        if (oc === "Falta") {
+                            registro[nome]["Falta"] = !registro[nome]["Falta"];
+                            btn.classList.toggle('active-falta');
+                            div.classList.toggle('faltou');
+                            
+                            if(registro[nome]["Falta"]) {
+                                ocorrencias.forEach(outra => {
+                                    if(outra !== "Falta") {
+                                        registro[nome][outra] = false;
+                                        botoesMap[nome][outra].classList.remove('active');
+                                    }
+                                });
+                            }
+                        } else {
+                            if (registro[nome]["Falta"]) return;
+                            
+                            registro[nome][oc] = !registro[nome][oc];
+                            btn.classList.toggle('active');
+                        }
+                    };
+                    grid.appendChild(btn);
+                    botoesMap[nome][oc] = btn;
+                });
+                container.appendChild(div);
             });
-            container.appendChild(div);
-        });
+        }
 
-        // 2. Função para ler dados já salvos hoje
         async function carregarDadosDoDia() {
+            const dataHoje = obterDataLocal();
+            const turmaSelecionada = document.getElementById('seletor-turma').value;
+            document.getElementById('status-carga').innerText = "Sincronizando com Firebase...";
+            document.getElementById('conteudo-aula').value = ""; // Limpa campo de texto
+            
+            gerarInterface(turmaSelecionada);
+
             try {
-                const response = await fetch(`${URL_BASE}/turma_3ano/${dataAtual}.json`);
+                const response = await fetch(`${URL_BASE}/${turmaSelecionada}/${dataHoje}.json`);
                 const dados = await response.json();
                 
                 if (dados) {
+                    // Carrega o conteúdo da aula se ele existir no nó principal do dia
+                    if(dados._conteudoMinistrado) {
+                        document.getElementById('conteudo-aula').value = dados._conteudoMinistrado;
+                    }
+
                     for (let nome in dados) {
-                        if (registro[nome]) {
+                        if (nome !== "_conteudoMinistrado" && registro[nome]) {
+                            const div = document.getElementById('card-' + nome.replace(/\s+/g, '-'));
                             for (let oc in dados[nome]) {
                                 if (dados[nome][oc] === true) {
                                     registro[nome][oc] = true;
-                                    botoesMap[nome][oc].classList.add('active');
+                                    if(botoesMap[nome][oc]) {
+                                        if(oc === "Falta") {
+                                            botoesMap[nome][oc].classList.add('active-falta');
+                                            if(div) div.classList.add('faltou');
+                                        } else {
+                                            botoesMap[nome][oc].classList.add('active');
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                    document.getElementById('status-carga').innerText = `Dados de hoje (${dataAtual}) carregados!`;
+                    document.getElementById('status-carga').innerText = `Dados de hoje (${dataHoje}) carregados!`;
                 } else {
-                    document.getElementById('status-carga').innerText = "Nenhum registro hoje. Iniciando limpo.";
+                    document.getElementById('status-carga').innerText = `Nenhum registro hoje (${dataHoje}) nesta sala.`;
                 }
             } catch (e) {
-                document.getElementById('status-carga').innerText = "Erro ao sincronizar. Verifique a internet.";
+                document.getElementById('status-carga').innerText = "Erro de conexão.";
             }
         }
 
-        // 3. Salvar
+        function mudarTurma() {
+            carregarDadosDoDia();
+        }
+
         async function enviarDados() {
-            const URL = `${URL_BASE}/turma_3ano/${dataAtual}.json`;
+            const dataHoje = obterDataLocal();
+            const turmaSelecionada = document.getElementById('seletor-turma').value;
+            const textoConteudo = document.getElementById('conteudo-aula').value;
+            
+            // Insere o texto do conteúdo junto com os alunos antes de enviar
+            const dadosParaEnviar = { ...registro };
+            dadosParaEnviar["_conteudoMinistrado"] = textoConteudo;
+
+            const URL = `${URL_BASE}/${turmaSelecionada}/${dataHoje}.json`;
             try {
                 const response = await fetch(URL, {
                     method: 'PUT',
-                    body: JSON.stringify(registro)
+                    body: JSON.stringify(dadosParaEnviar)
                 });
-                if(response.ok) alert("Salvo com sucesso!");
+                if(response.ok) alert(`Salvo com sucesso na data ${dataHoje}!`);
             } catch (e) {
                 alert("Erro ao salvar!");
             }
         }
 
-        // Iniciar carregando dados
         carregarDadosDoDia();
     </script>
 </body>
