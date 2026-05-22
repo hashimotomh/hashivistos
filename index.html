@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OE Matemática - Completo</title>
+    <title>OE Matemática - Formato Tabela</title>
     <style>
         body { font-family: sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
         .topo-fixo { position: sticky; top: 0; background: #f0f2f5; padding: 10px 0; z-index: 99; border-bottom: 1px solid #ddd; }
@@ -11,52 +11,67 @@
         select { width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; font-weight: bold; color: #1a73e8; margin-bottom: 10px; box-sizing: border-box; }
         textarea { width: 100%; height: 60px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: sans-serif; font-size: 0.9rem; resize: none; box-sizing: border-box; display: block; margin-bottom: 5px; }
         #status-carga { text-align: center; font-size: 0.85rem; color: #666; margin: 5px 0; font-weight: 500; }
-        .container { max-width: 600px; margin: auto; padding-bottom: 100px; }
-        .aluno-card { background: white; margin-bottom: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .aluno-card.faltou { background: #ffebee; border-left: 5px solid #d32f2f; }
-        h3 { margin: 0 0 10px 0; color: #333; font-size: 0.9rem; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .grid-botoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
-        button { padding: 10px 5px; border: 1px solid #ddd; border-radius: 8px; background: #f8f9fa; cursor: pointer; font-size: 0.7rem; }
-        button.active { background: #34a853; color: white; border-color: #2d8e47; font-weight: bold; }
-        button.active-falta { background: #d32f2f; color: white; border-color: #b71c1c; font-weight: bold; }
+        
+        /* ESTILOS DA TABELA */
+        .tabela-container { width: 100%; overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 100px; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+        th { background: #f8f9fa; color: #555; font-weight: bold; position: sticky; top: 0; }
+        td.nome-aluno { text-align: left; font-weight: bold; color: #333; min-width: 200px; }
+        
+        /* LINHA DE ALUNO COM FALTA */
+        tr.faltou { background-color: #ffebee; }
+        tr.faltou td.nome-aluno { color: #c62828; }
+
+        /* BOTÕES DA TABELA */
+        .btn-oc { width: 100%; padding: 8px 4px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
+        .btn-oc.active { background: #34a853; color: white; border-color: #2d8e47; font-weight: bold; }
+        .btn-oc.active-falta { background: #d32f2f; color: white; border-color: #b71c1c; font-weight: bold; }
+        
+        /* BOTÃO FLUTUANTE */
         .btn-salvar { 
             position: fixed; bottom: 20px; right: 20px; width: 70px; height: 70px; 
             border-radius: 50%; background: #1a73e8; color: white; border: none; 
-            font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 100;
+            font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 100; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="topo-fixo">
-            <h2>Orientação de Estudos</h2>
-            <select id="seletor-turma" onchange="mudarTurma()">
-                <option value="turma_1F">1F</option>
-                <option value="turma_2H">2H</option>
-                <option value="turma_2I">2I</option>
-                <option value="turma_3D">3D</option>
-            </select>
-            <textarea id="conteudo-aula" placeholder="Digite aqui o conteúdo ministrado hoje..."></textarea>
-            <div id="status-carga">Sincronizando com Firebase...</div>
-        </div>
-        
-        <div id="lista-alunos"></div>
+    <div class="topo-fixo">
+        <h2>Orientação de Estudos</h2>
+        <select id="seletor-turma" onchange="mudarTurma()">
+            <option value="turma_1F">1F</option>
+            <option value="turma_2H">2H</option>
+            <option value="turma_2I">2I</option>
+            <option value="turma_3D">3D</option>
+        </select>
+        <textarea id="conteudo-aula" placeholder="Digite aqui o conteúdo ministrado hoje..."></textarea>
+        <div id="status-carga">Sincronizando com Firebase...</div>
+    </div>
+    
+    <div class="tabela-container">
+        <table>
+            <thead>
+                <tr id="cabecalho-tabela">
+                    </tr>
+            </thead>
+            <tbody id="corpo-tabela">
+                </tbody>
+        </table>
     </div>
     
     <button class="btn-salvar" onclick="enviarDados()">SALVAR</button>
 
     <script>
-       // const URL_BASE = "https://oe-acompanhamento-default-rtdb.firebaseio.com/turma_3ano/"; // <--- COLOQUE SUA URL AQUI
         // Quebrando a URL em partes para enganar os robôs de varredura do GitHub
-const parte1 = "htt";
-const parte2 = "ps://";
-const parte3 = "oe-acompanhamento"; // <--- DIGITE APENAS O NOME DO SEU PROJETO AQUI (Ex: o início da URL antes do ponto)
-const parte4 = "-default-rtdb.fire";
-const parte5 = "baseio.com";
-
-// O sistema junta tudo em tempo de execução no seu celular
-const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
+        const parte1 = "htt";
+        const parte2 = "ps://";
+        const parte3 = "oe-acompanhamento"; // <--- COLOQUE APENAS O NOME DO SEU PROJETO AQUI
+        const parte4 = "-default-rtdb.fire";
+        const parte5 = "baseio.com";
+        const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
+        
         function obterDataLocal() {
             const agora = new Date();
             const dataBr = agora.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
@@ -71,23 +86,29 @@ const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
                 "ALANA MARQUES DA SILVA", "ALESSANDRO RICARDO DE DEUS BIANCHIM", "ALYSSON DE MELO BORGES", "ANA LUIZA DOS ANJOS SANTANA", "ANA SOPHIA SILVA DOMINGUES", "BEATRIZ WELLEN SANTOS VERNE", "BIANCA DA SILVA VILLA", "DAVI LUCCA ARANTES", "EDLLY ELOINI JESUS DE OLIVEIRA", "EVELLYN VICTORIA BUENO FRASSON", "FILIPE PEREIRA DA SILVA", "GABRIEL INACIO BUZANELI", "GIOVANNA COSTA SOUZA", "JENIFFER REIS DE ARAÚJO SILVA (GUSTAVO DE ARAUJO SILVA)", "GUSTAVO LUCAS FRANCELINO DA SILVA", "ISABELA DA SILVA CORRÊA PINTO", "ISABELLA CAMILY FERREIRA MARTINS", "ISABELLY LIMA FURLAN", "JOÃO VITOR DA COSTA SILVA", "KATHLEEN RIHANNA RODRIGUES CARDOSO", "KAUÃ VELONISQUI DOS SANTOS", "LARISSA GABRIELLY SILVA DE SANTANA", "LEONARDO DA SILVA MARTINS", "LEVI BRAGA SANTOS REIS", "LUCAS DA SILVA RODRIGUES", "LUCAS HENRIQUE SILVA GOMES", "MARCOS VINNICYUS DE SOUSA RODRIGUES", "SOPHIA GITIRANA VIEIRA SANTOS", "VICTOR DA CRUZ FRANCISCO", "WISLA ISABELLY CARVALHO DA SILVA", "YAGO HENRIQUE VIANNA PAULINO", "YASMIN ARAUJO PEREIRA"
             ],
             "turma_2H": [
-                "AMANDA SILVA LIMA SALDANHA RESENDE", "ANA BEATRIZ SANTOS CAVALCANTE", "ANA CLARA TOREZIN LOPES", "ANA LARA DE SOUZA SANTOS", "BRUNO ANTUNES AVANCI", "BRUNO OLIVEIRA GOMES", "CARLOS EDUARDO MACEDO AMOROZINO", "CÁSSIO ANDRADE SANTOS DE MORAES", "CRISTIANO PRADO FERREIRA DE BARROS", "DANIELE PEREIRA LIMA", "DANIELLA SILVA", "DHESSICA ADRIELE DO NASCIMENTO RIBEIRO", "DOUGLAS FLORIANO ROCHA", "EDUARDA DE SOUZA CAPELATTO", "EDUARDO LEMES CONTI", "ENZO GABRIEL VITALONE ROQUE", "GABRIEL SOUZA GOMES", "GIOVANNA DA SILVA ROCHA", "HENRIQUE MARQUES PEREIRA", "ISABELLA PEREIRA DA CUNHA", "ISABELLY LOPES GARCIA", "JAMILY DOS SANTOS NOGUEIRA", "JHENIFER AMSTALDEN DA SILVA", "JULIANO SIQUEIRA GOES SILVA", "JULIO CESAR RODRIGUES DE SOUZA", "LAYSLA SOUZA MATOS", "LEANDRO FABIO ANDRADE", "LETICIA FABIO ANDRADE", "MURILO ALVES DE OLIVEIRA", "NATALIA DA COSTA GOMES", "NICOLAS GABRIEL DA SILVA", "PABLO CAMARGO SCATENA", "PABLO LIMA DE OLIVEIRA", "PEDRO HENRIQUE MENDES DE SOUSA", "REBECCA DINIZ ESTEVAM", "RICHARD PAMPLONA", "VICTOR PAULO GUAIUME", "VITORIA DO NASCIMENTO FERREIRA LIMA", "YASMIN CHEREM CALEGIA", "YASMIN VICTORIA SOFIATI", "PEDRO HENRIQUE DA SILVA CUBA", "MARIA GABRIELA DIONIZIO DE ANDRADE", "YASMIN SCARABEL GRAEFF", "YASMIN MAGALHÃES FRANCISCO"
+                "AMANDA SILVA LIMA SALDANHA RESENDE", "ANA BEATRIZ SANTOS CAVALCANTE", "ANA CLARA TOREZIN LOPES", "ANA LARA DE SOUZA SANTOS", "BRUNO ANTUNES AVANCI", "BRUNO OLIVEIRA GOMES", "CARLOS EDUARDO MACEDO AMOROZINO", "CÁSSIO ANDRADE SANTOS DE MORAES", "CRISTIANO PRADO FERREIRA DE BARROS", "DANIELE PEREIRA LIMA", "DANIELLA SILVA", "DHESSICA ADRIELE DO NASCIMENTO RIBEIRO", "DOUGLAS FLORIANO ROCHA", "EDUARDA DE SOUZA CAPELATTO", "EDUARDO LEMES CONTI", "ENZO GABRIEL VITALONE ROQUE", "GABRIEL SOUZA GOMES", "GIOVANNA DA SILVA ROCHA", "HENRIQUE MARQUES PEREIRA", "ISABELLA PEREIRA DA CUNHA", "ISABELLY LOPES GARCIA", "JAMILY DOS SANTOS NOGUEIRA", "JHENIFER AMSTALDEN DA SILVA", "JULIANO SIQUEIRA GOES SILVA", "JULIO CESAR RODRIGUES DE SOUZA", "LAYSLA SOUZA MATOS", "LEANDRO FABIO ANDRADE", "LETICIA FABIO ANDRADE", "MURILO ALVES DE OLIVEIRA", "NATALIA DA COSTA GOMES", "NICOLAS GABRIEL DA SILVA", "PABLO CAMARGO SCATENA", "PABLO LIMA DE OLIVEIRA", "PEDRO HENRIQUE MENDES DE SOUSA", "REBECCA DINIZ ESTEVAM", "RICHARD PAMPLONA", "VICTOR PAULO GUAIUME", "VITORIA DO NASCIMENTO FERREIRA LIMA", "YASMIN CHEREM CALEGIA", "YASMIN VICTORIA SOFIATI", "PEDRO HENRIQUE DA SILVA CUBA", "MARIA GABRIELA DIONIZIO DE ANDRADE", "YASMIN SCARABEL GRAEFF"
             ],
             "turma_2I": [
-                "ANA LAURA DOS SANTOS BATISTA", "BEATRIZ SUFFI", "CARLOS EDUARDO CARVALHO TARAMELLI LIMA", "CARLOS GABRIEL SANTOS OLIVEIRA", "CELINE DION DE OLIVEIRA PEREIRA DA SILVA", "EMANUEL PEDROSO SANTOS", "EVELLYN YSABELLY DIAS ALVES", "GABRIEL DA SILVA PORFIRIO", "GABRIEL DE CASTRO JORDÃO", "GABRIEL HENRIQUE SANCHES ALVES", "GABRIEL RODRIGUES DE CASTRO", "GABRIELLY SOUZA DO ESPIRITO SANTO", "GABRIELY EDUARDA SOUZA DA SILVA", "GEOVANI GABRIEL FARIAS DUTRA", "GUILHERME MÁRTINS DE OLIVEIRA", "GUSTAVO PACHECO DE ALMEIDA", "HELOÍSA PIRES", "HEROS HENRIQUE LIMA DOS SANTOS", "HIGOR DA SILVA", "ISABELI TOLEDO CHEREM DA SILVA", "ISABELY SILVA PROENÇA", "JHONATAN HENRIQUE MARCIANO SANTOS", "KEILA DE JESUS SANTOS", "LETÍCIA FERREIRA DA SILVA", "LUAN SOUZA NEVES", "MAIRA GABRIELA GOMES", "MARIA DE LOURDES CAMPOS DA SILVA", "MAYKE DIONIZIO MEDEIROS DOS SANTOS", "MAYUMI SUGAWARA DOS SANTOS", "MOISES DE CARVALHO CAMPOS", "PABLO SILVA AMARAL", "RUAN DA SILVA FIDELES", "SUSAN ELLEN DE AZEVEDO LIMA", "TIAGO PITES SILVA", "VITOR MANOEL SANTOS RAMOS", "VITORIA APARECIDA LEITE DOS SANTOS", "VITORIA REGINA FERREIRA DOS SANTOS", "INGRYD CARDOSO DA SILVA", "KAUAN LUZ DA SILVA", "LAIS CRISTINA ROBERTO DOS SANTOS", "MIGUEL PEREIRA DE LIMA", "ALINE ROCHA DE ARAUJO", "KAREN EMANUELLY SOARES DA ROCHA"
+                "ANA LAURA DOS SANTOS BATISTA", "BEATRIZ SUFFI", "CARLOS EDUARDO CARVALHO TARAMELLI LIMA", "CARLOS GABRIEL SANTOS OLIVEIRA", "CELINE DION DE OLIVEIRA PEREIRA DA SILVA", "EMANUEL PEDROSO SANTOS", "EVELLYN YSABELLY DIAS ALVES", "GABRIEL DA SILVA PORFIRIO", "GABRIEL DE CASTRO JORDÃO", "GABRIEL HENRIQUE SANCHES ALVES", "GABRIEL RODRIGUES DE CASTRO", "GABRIELLY SOUZA DO ESPIRITO SANTO", "GABRIELY EDUARDA SOUZA DA SILVA", "GEOVANI GABRIEL FARIAS DUTRA", "GUILHERME MÁRTINS DE OLIVEIRA", "GUSTAVO PACHECO DE ALMEIDA", "HELOÍSA PIRES", "HEROS HENRIQUE LIMA DOS SANTOS", "HIGOR DA SILVA", "ISABELI TOLEDO CHEREM DA SILVA", "ISABELY SILVA PROENÇA", "JHONATAN HENRIQUE MARCIANO SANTOS", "KEILA DE JESUS SANTOS", "LETÍCIA FERREIRA DA SILVA", "LUAN SOUZA NEVES", "MAIRA GABRIELA GOMES", "MARIA DE LOURDES CAMPOS DA SILVA", "MAYKE DIONIZIO MEDEIROS DOS SANTOS", "MAYUMI SUGAWARA DOS SANTOS", "MOISES DE CARVALHO CAMPOS", "PABLO SILVA AMARAL", "RUAN DA SILVA FIDELES", "SUSAN ELLEN DE AZEVEDO LIMA", "TIAGO PITES SILVA", "VITOR MANOEL SANTOS RAMOS", "VITORIA APARECIDA LEITE DOS SANTOS", "VITORIA REGINA FERREIRA DOS SANTOS", "INGRYD CARDOSO DA SILVA", "KAUAN LUZ DA SILVA", "LAIS CRINA ROBERTO DOS SANTOS", "MIGUEL PEREIRA DE LIMA", "ALINE ROCHA DE ARAUJO", "KAREN EMANUELLY SOARES DA ROCHA"
             ],
             "turma_3D": [
                 "AMANDA EVELLYN DE SOUSA MATIAS BENTES", "ANA CRISTINA DA SILVA PIRES", "ANA LAURA VITAL ALVES", "ANDRIELLY SERRA SOUZA", "ANNA LUIZA MARTINS DA SILVA", "ASAFE BRAGA SANTOS REIS", "BEATRIZ ALVES SIMÕES DE OLIVEIRA", "EDUARDO DOS SANTOS ALVES", "EMANUELLE SIMAROLI ALQUINO", "EMILY LEONEL DINIZ", "ESTHER VICTORIA FERRETI MIGUEL", "EVELLYN HELOYSE PEREIRA RAULINO", "GABRIEL CORREA TAVARES", "GABRIEL RIBEIRO GONCALVES", "GUILHERME CUSTODIO CAÇÃO", "JANÁIRA DO NASCIMENTO BARROSO", "JENIFFER PORTELA MUNHOZ", "JOÃO VICTOR MARQUES", "JÚLIA EDUARDA NUNES", "JULIA MOREIRA MANENTE", "KAIKY PEREIRA ROCHA", "KAUA HENRIQUE FERREIRA DA SILVA", "LARISSI NAYARA VIEIRA GONCALVES", "LETICIA DE SOUZA DURAES", "LUCAS DE FREITAS SANTOS", "MARIA CLARA ALVES DA ROCHA SOUZA", "MARIA EDUARDA DUTRA DA SILVA", "MARIA EDUARDA PADILHA DE SOUSA", "MARIA ELOIZA FROES DE ARAUJO", "RAFAELA CORREA SILVA", "RICARDO VIEIRA CARDOSO DA SILVA", "RYAN DE ALBUQUERQUE SILVA", "SAMUEL SMITH SILVA MENDES", "SARA BIANCHIM DA ROSA", "TAINA TRINDADE DE JESUS", "THOMAS DE BRITO SELBACH DOS SANTOS", "VANESSA SILVA DE OLIVEIRA", "YASMIN AMORIM ALVES", "YASMIN GARCIA DE PAULO", "YASMIN RACKELLY DE ALMEIDA MOTA"
             ]
         };
 
-        const ocorrencias = ["Livro", "Exercícios", "Conversa", "Combinados", "Respeito", "Dúvida", "Difícil", "Celular", "Falta"];
+        const ocorrencias = ["Falta", "Exercícios", "Conversa", "Combinados", "Respeito", "Dúvida", "Difícil", "Celular", "Livro"];
         let registro = {};
         let botoesMap = {};
 
         function gerarInterface(turmaKey) {
-            const container = document.getElementById('lista-alunos');
-            container.innerHTML = ""; 
+            const cabecalho = document.getElementById('cabecalho-tabela');
+            const corpo = document.getElementById('corpo-tabela');
+            
+            // 1. Montar Cabeçalho da Tabela
+            cabecalho.innerHTML = "<th>Nome do Aluno</th>" + ocorrencias.map(oc => `<th>${oc}</th>`).join('');
+            
+            // 2. Limpar estruturas antigas
+            corpo.innerHTML = ""; 
             registro = {};
             botoesMap = {};
 
@@ -96,27 +117,37 @@ const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
                 registro[nome] = {};
                 botoesMap[nome] = {};
                 
-                const div = document.createElement('div');
-                div.className = 'aluno-card';
-                div.id = 'card-' + nome.replace(/\s+/g, '-');
-                div.innerHTML = `<h3>${nome}</h3><div class="grid-botoes"></div>`;
-                const grid = div.querySelector('.grid-botoes');
+                // Criar a linha (tr) do aluno
+                const tr = document.createElement('tr');
+                tr.id = 'linha-' + nome.replace(/\s+/g, '-');
                 
+                // Célula com o nome
+                const tdNome = document.createElement('td');
+                tdNome.className = 'nome-aluno';
+                tdNome.innerText = nome;
+                tr.appendChild(tdNome);
+                
+                // Células com os botões das ocorrências
                 ocorrencias.forEach(oc => {
                     registro[nome][oc] = false;
+                    const tdBtn = document.createElement('td');
                     const btn = document.createElement('button');
-                    btn.innerText = oc;
+                    btn.className = 'btn-oc';
+                    btn.innerText = "—"; // Texto padrão quando não marcado
+                    
                     btn.onclick = () => {
                         if (oc === "Falta") {
                             registro[nome]["Falta"] = !registro[nome]["Falta"];
                             btn.classList.toggle('active-falta');
-                            div.classList.toggle('faltou');
+                            btn.innerText = registro[nome]["Falta"] ? "FALTOU" : "—";
+                            tr.classList.toggle('faltou');
                             
                             if(registro[nome]["Falta"]) {
                                 ocorrencias.forEach(outra => {
                                     if(outra !== "Falta") {
                                         registro[nome][outra] = false;
                                         botoesMap[nome][outra].classList.remove('active');
+                                        botoesMap[nome][outra].innerText = "—";
                                     }
                                 });
                             }
@@ -125,12 +156,16 @@ const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
                             
                             registro[nome][oc] = !registro[nome][oc];
                             btn.classList.toggle('active');
+                            btn.innerText = registro[nome][oc] ? "SIM" : "—";
                         }
                     };
-                    grid.appendChild(btn);
+                    
+                    tdBtn.appendChild(btn);
+                    tr.appendChild(tdBtn);
                     botoesMap[nome][oc] = btn;
                 });
-                container.appendChild(div);
+                
+                corpo.appendChild(tr);
             });
         }
 
@@ -138,7 +173,7 @@ const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
             const dataHoje = obterDataLocal();
             const turmaSelecionada = document.getElementById('seletor-turma').value;
             document.getElementById('status-carga').innerText = "Sincronizando com Firebase...";
-            document.getElementById('conteudo-aula').value = ""; // Limpa campo de texto
+            document.getElementById('conteudo-aula').value = "";
             
             gerarInterface(turmaSelecionada);
 
@@ -147,23 +182,24 @@ const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
                 const dados = await response.json();
                 
                 if (dados) {
-                    // Carrega o conteúdo da aula se ele existir no nó principal do dia
                     if(dados._conteudoMinistrado) {
                         document.getElementById('conteudo-aula').value = dados._conteudoMinistrado;
                     }
 
                     for (let nome in dados) {
                         if (nome !== "_conteudoMinistrado" && registro[nome]) {
-                            const div = document.getElementById('card-' + nome.replace(/\s+/g, '-'));
+                            const tr = document.getElementById('linha-' + nome.replace(/\s+/g, '-'));
                             for (let oc in dados[nome]) {
                                 if (dados[nome][oc] === true) {
                                     registro[nome][oc] = true;
                                     if(botoesMap[nome][oc]) {
                                         if(oc === "Falta") {
                                             botoesMap[nome][oc].classList.add('active-falta');
-                                            if(div) div.classList.add('faltou');
+                                            botoesMap[nome][oc].innerText = "FALTOU";
+                                            if(tr) tr.classList.add('faltou');
                                         } else {
                                             botoesMap[nome][oc].classList.add('active');
+                                            botoesMap[nome][oc].innerText = "SIM";
                                         }
                                     }
                                 }
@@ -188,7 +224,6 @@ const URL_BASE = parte1 + parte2 + parte3 + parte4 + parte5;
             const turmaSelecionada = document.getElementById('seletor-turma').value;
             const textoConteudo = document.getElementById('conteudo-aula').value;
             
-            // Insere o texto do conteúdo junto com os alunos antes de enviar
             const dadosParaEnviar = { ...registro };
             dadosParaEnviar["_conteudoMinistrado"] = textoConteudo;
 
