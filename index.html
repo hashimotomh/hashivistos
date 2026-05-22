@@ -16,7 +16,30 @@
         .tabela-container { width: 100%; overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 100px; }
         table { width: 100%; border-collapse: collapse; min-width: 800px; }
         th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.85rem; }
-        th { background: #f8f9fa; color: #555; font-weight: bold; position: sticky; top: 0; }
+
+/* AJUSTE NO CABEÇALHO PARA CONGELAR A PRIMEIRA CÉLULA */
+th { background: #f8f9fa; color: #555; font-weight: bold; position: sticky; top: 0; z-index: 2; }
+th:first-child { position: sticky; left: 0; z-index: 3; background: #f8f9fa; }
+
+/* COLUNA DO NOME CONGELADA (STICKY) */
+td.nome-aluno { 
+    text-align: left; 
+    font-weight: bold; 
+    color: #333; 
+    min-width: 160px; /* Reduzi um pouco para dar mais espaço aos botões no celular */
+    max-width: 160px;
+    white-space: nowrap; /* Impede o nome de quebrar em duas linhas */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Se o nome for gigante, ele coloca "..." no fim */
+    position: sticky;
+    left: 0;
+    background: white; /* Fundo branco para cobrir os botões que passam por trás */
+    z-index: 1;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* Sombra sutil para destacar a divisão ao rolar */
+}
+
+/* GARANTE QUE A LINHA DO ALUNO QUE FALTOU MANTENHA A COR CORRETA NA COLUNA CONGELADA */
+tr.faltou td.nome-aluno { background: #ffebee; color: #c62828; }
         td.nome-aluno { text-align: left; font-weight: bold; color: #333; min-width: 200px; }
         
         /* LINHA DE ALUNO COM FALTA */
