@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel do Professor V3 - Com Relatórios PDF</title>
+    <title>Painel do Professor V2 - Modo Rápido</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 15px; color: #333; }
         .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -15,10 +14,15 @@
         
         .secao-titulo { font-weight: bold; font-size: 14px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; margin-top: 15px; }
         
+        /* Caixa de Texto do Conteúdo */
+        .input-conteudo { width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: border 0.2s; }
+        .input-conteudo:focus { border-color: #34495e; outline: none; }
+
         /* Layout das Ocorrências */
         .grid-ocorrencias { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 25px; }
         .btn-acao { padding: 12px 8px; border: 2px solid #bdc3c7; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
+        /* Cores das ações quando selecionadas */
         .btn-pos.ativo { background-color: #2ecc71 !important; color: white !important; border-color: #27ae60 !important; transform: scale(1.03); box-shadow: 0 4px 10px rgba(46,204,113,0.3); }
         .btn-neg.ativo { background-color: #e74c3c !important; color: white !important; border-color: #c0392b !important; transform: scale(1.03); box-shadow: 0 4px 10px rgba(231,76,60,0.3); }
         .btn-pos:hover { border-color: #2ecc71; background: #f4fbf7; }
@@ -29,36 +33,36 @@
         .grid-alunos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
         .btn-aluno { padding: 15px 10px; background-color: #ecf0f1; border: 1px solid #bdc3c7; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; text-align: left; transition: all 0.15s; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; }
         .btn-aluno:hover { background-color: #e2e7e9; transform: translateY(-2px); }
+        .btn-aluno:active { transform: translateY(0); }
         
+        /* Animação de clique com sucesso */
         @keyframes piscarSucesso {
             0% { background-color: #2ecc71; color: white; }
             100% { background-color: #ecf0f1; color: #333; }
         }
         .piscar { animation: piscarSucesso 0.6s ease-out; }
-        .barra-status { margin-top: 20px; padding: 10px; background: #34495e; color: white; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; min-height: 20px; }
 
-        /* Area de Ferramentas de Relatório */
-        .painel-relatorios { display: flex; flex-wrap: wrap; gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
-        .select-relatorio { flex: 1; min-width: 200px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-        .btn-pdf { padding: 10px 15px; background-color: #9b59b6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .btn-pdf:hover { background-color: #8e44ad; }
-
-        /* Estilos específicos da folha impressa (Escondido na tela comum) */
-        #area-impressao { display: none; font-family: Arial, sans-serif; padding: 30px; color: #000; }
-        .pdf-header { border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
-        .pdf-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .pdf-table th, .pdf-table td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
-        .pdf-table th { background-color: #f2f2f2; }
+        /* Rodapé de Status */
+        .barra-status { margin-top: 20px; padding: 12px; background: #34495e; color: white; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; min-height: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
+	<div id="login-professor-box" style="max-width: 400px; margin: 40px auto; background: #fff; padding: 25px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center;">
+        <h2 style="margin-top:0; color:#34495e;">Login do Professor</h2>
+        <input type="email" id="email-prof" placeholder="Seu e-mail do Firebase" class="input-conteudo" style="margin-bottom: 10px; text-align: center;">
+        <input type="password" id="senha-prof" placeholder="Sua senha do Firebase" class="input-conteudo" style="margin-bottom: 15px; text-align: center;">
+        <button onclick="fazerLoginProfessor()" style="width: 100%; padding: 12px; background-color: #34495e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Entrar no Painel</button>
+        <p id="erro-login-prof" style="color:#e74c3c; display:none; font-weight:bold; margin-top:10px; font-size:13px;"></p>
+    </div>
+
+    <div id="painel-professor-conteudo" style="display: none;">
     <h1>Painel de Controle Gamificado ⚡</h1>
     
     <div class="secao-titulo">Conteúdo da Aula (Opcional)</div>
-    <div style="margin-bottom: 20px;">
-        <input type="text" id="conteudo-aula" placeholder="Ex: Equações de 2º Grau / Leitura do capítulo 3" style="width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+    <div>
+        <input type="text" id="conteudo-aula" placeholder="Ex: Equações de 2º Grau / Leitura do capítulo 3" class="input-conteudo">
     </div>
     
     <div class="secao-titulo">1. Selecione a Ocorrência Ativa</div>
@@ -69,10 +73,13 @@
         <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Participação Ativa', 10)">
             <span>🙋 Participação</span><span class="xp-tag">+10 XP</span>
         </button>
+        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Tirou Dúvida', 10)">
+            <span>💡 Tirou Dúvida</span><span class="xp-tag">+10 XP</span>
+        </button>
         <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Material Completo', 5)">
             <span>🎒 Material Ok</span><span class="xp-tag">+5 XP</span>
         </button>
-        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Foco e Produção', 10)">
+        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Foco e Producão', 10)">
             <span>🎯 Foco Total</span><span class="xp-tag">+10 XP</span>
         </button>
         <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Colaboração Extra', 20)">
@@ -84,6 +91,9 @@
         </button>
         <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Excesso de Conversa', -10)">
             <span>💬 Conversa</span><span class="xp-tag">-10 XP</span>
+        </button>
+        <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Atrapalhou a Aula', -10)">
+            <span>🛑 Atrapalhou</span><span class="xp-tag">-10 XP</span>
         </button>
         <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Bagunça / Distração', -15)">
             <span>🏃 Bagunça</span><span class="xp-tag">-15 XP</span>
@@ -98,7 +108,7 @@
 
     <div class="secao-titulo">2. Clique no Aluno para Computar</div>
     <div class="grid-alunos">
-        <button class="btn-aluno" onclick="computarPonto(this, '1001', 'ALIGNY FERNANDA CASONI DO NASCIMENTO')"><span>1. Alyce F.</span></button>
+        <button class="btn-aluno" onclick="computarPonto(this, '1001', 'ALYCE FERNANDA CASONI DO NASCIMENTO')"><span>1. Alyce F.</span></button>
         <button class="btn-aluno" onclick="computarPonto(this, '1002', 'ANA CLARA FERREIRA DE OLIVEIRA')"><span>2. Ana Clara</span></button>
         <button class="btn-aluno" onclick="computarPonto(this, '1003', 'ANA JÚLIA DANGL TABET')"><span>3. Ana Júlia</span></button>
         <button class="btn-aluno" onclick="computarPonto(this, '1004', 'ANGEL RUBEN HIGUERA MARCANO')"><span>4. Angel R.</span></button>
@@ -131,50 +141,10 @@
     </div>
 
     <div class="barra-status" id="status">Aguardando seleção de ocorrência...</div>
-
-    <div class="secao-titulo">3. Emissão de Relatórios em PDF 📋</div>
-    <div class="painel-relatorios">
-        <select id="select-aluno-relatorio" class="select-relatorio">
-            <option value="GERAL">-- Gerar Relatório de Toda a Turma --</option>
-            <option value="1001">ALYCE FERNANDA CASONI DO NASCIMENTO</option>
-            <option value="1002">ANA CLARA FERREIRA DE OLIVEIRA</option>
-            <option value="1003">ANA JÚLIA DANGL TABET</option>
-            <option value="1004">ANGEL RUBEN HIGUERA MARCANO</option>
-            <option value="1005">ARTHUR ESCHEMBACH SILVA</option>
-            <option value="1006">BRUNO MIGUEL FRANCO DE MORAES</option>
-            <option value="1007">CLARA REIS FERNANDES DO VALE</option>
-            <option value="1008">DAFNE LOMES PACIENCIA</option>
-            <option value="1009">DAVI LUCCA LEME DE SOUZA</option>
-            <option value="1010">DAVI SANTOS DAMO</option>
-            <option value="1011">EVELLYN DE OLIVEIRA BERTANE</option>
-            <option value="1012">GIOVANA CUNHA MOTA</option>
-            <option value="1013">GUILHERME DONATO MATTOS DE PAULA</option>
-            <option value="1014">HEITOR DANIEL DE CAMARGO SILVA</option>
-            <option value="1015">ISAAC MATHEUS SANTOS DA SILVA</option>
-            <option value="1016">ISABELLY COLONIA DE SOUZA</option>
-            <option value="1017">IZABELLE COSTA SANTOS</option>
-            <option value="1018">JASMINY KARLA SANTANA DE ALMEIDA</option>
-            <option value="1019">JULIO VINICIUS PALMEIRA GHIRARDELLI</option>
-            <option value="1020">KAUÃ AUGUSTO DE SOUZA</option>
-            <option value="1021">LORENZO SANTOS SAVI</option>
-            <option value="1022">MARIA CLARA LEMOS ALMEIDA</option>
-            <option value="1023">MIGUEL HENRIQUE BOONEN EUGENIO</option>
-            <option value="1024">MURILO HENRIQUE DA SILVA CITRAN</option>
-            <option value="1025">NICOLAS RAFAEL DIONISIO TRIQUEIROS</option>
-            <option value="1026">OLIVIA FERREIRA PRESTES</option>
-            <option value="1027">OTÁVIO BARBOSA SILVA</option>
-            <option value="1028">PIETRA LABELLA MOREIRA SANTOS</option>
-            <option value="1029">RYAN LUCAS NASCIMENTO SANTOS</option>
-            <option value="1030">SOFIA DA COSTA AMPARO</option>
-        </select>
-        <button class="btn-pdf" onclick="gerarPDF()">Baixar Relatório PDF</button>
-    </div>
 </div>
 
-<div id="area-impressao"></div>
-
 <script>
-    // COLOQUE SUAS CHAVES DO FIREBASE AQUI 
+    // Configurações do seu Firebase (Cole aqui as chaves do seu projeto)
     const firebaseConfig = {
   apiKey: "AIzaSyBtY3gnLGcX9biqtgy9Um7C2e1Y21-DSP8",
   authDomain: "gamificacao-hashi.firebaseapp.com",
@@ -185,18 +155,48 @@
   measurementId: "G-XJR45JGEGF"
 };
     
+    // Inicializar o Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth(); // <--- Força a criação da instância de autenticação aqui
 
+    // Função para autenticar o professor antes de liberar o painel
+    async function fazerLoginProfessor() {
+        const email = document.getElementById("email-prof").value.trim();
+        const senha = document.getElementById("senha-prof").value.trim();
+        const erro = document.getElementById("erro-login-prof");
+
+        try {
+            // Usa a instância direta 'auth' que criamos lá em cima
+            await auth.signInWithEmailAndPassword(email, senha);
+            
+            // Se der certo, oculta a tela de login e mostra o painel de pontos
+            document.getElementById("login-professor-box").style.display = "none";
+            document.getElementById("painel-professor-conteudo").style.display = "block";
+            document.getElementById("status").innerText = "Aguardando seleção de ocorrência...";
+        } catch (e) {
+            erro.innerText = "Falha na autenticação: " + e.message;
+            erro.style.display = "block";
+        }
+    }
+
+    // Variáveis globais para armazenar o estado selecionado
     let acaoAtivaMotivo = "";
     let acaoAtivaXP = 0;
 
     function selecionarOcorrencia(botao, motivo, xp) {
+        // Remove o destaque visual de todos os botões de ação
         document.querySelectorAll('.btn-acao').forEach(b => b.classList.remove('ativo'));
+        
+        // Aplica o destaque no botão selecionado
         botao.classList.add('ativo');
+        
+        // Define as variáveis globais
         acaoAtivaMotivo = motivo;
         acaoAtivaXP = xp;
-        document.getElementById("status").innerText = `PRONTO: Clique nos alunos para aplicar [ ${motivo} (${xp > 0 ? '+' : ''}${xp} XP) ]`;
+        
+        const statusTxt = `PRONTO: Clique nos alunos para aplicar [ ${motivo} (${xp > 0 ? '+' : ''}${xp} XP) ]`;
+        document.getElementById("status").innerText = statusTxt;
     }
 
     async function computarPonto(botaoAluno, id, nomeCompleto) {
@@ -205,11 +205,11 @@
             return;
         }
 
+        const conteudoAula = document.getElementById("conteudo-aula").value.trim();
         document.getElementById("status").innerText = `💾 Gravando para ${nomeCompleto}...`;
 
         try {
             const alunoRef = db.collection("alunos").doc(id);
-            const conteudoAula = document.getElementById("conteudo-aula").value.trim();
             
             await db.runTransaction(async (transaction) => {
                 const doc = await transaction.get(alunoRef);
@@ -217,13 +217,14 @@
                 
                 if (doc.exists) {
                     novoXp = (doc.data().xp_atual || 0) + acaoAtivaXP;
-                    if(novoXp < 0) novoXp = 0;
-                    transaction.update(alunoRef, { xp_atual: novoXp });
+                    if(novoXp < 0) novoXp = 0; // Proteção contra XP negativo
+                    transaction.update(alunoRef, { xp_atual: novoXp, nome: nomeCompleto });
                 } else {
                     if(novoXp < 0) novoXp = 0;
                     transaction.set(alunoRef, { nome: nomeCompleto, xp_atual: novoXp, pin: "1234" });
                 }
 
+                // Cria o registro no histórico salvando o Conteúdo da Aula digitado
                 const historicoRef = db.collection("historico").doc();
                 transaction.set(historicoRef, {
                     aluno_id: id,
@@ -234,10 +235,13 @@
                 });
             });
 
+            // Efeito visual rápido de piscar verde para confirmar o clique
             botaoAluno.classList.add('piscar');
             setTimeout(() => botaoAluno.classList.remove('piscar'), 600);
+
             document.getElementById("status").innerText = `✅ Sucesso! ${acaoAtivaMotivo} computado para ${nomeCompleto}.`;
             
+            // Restaura o texto informativo para manter o fluxo contínuo de cliques
             setTimeout(() => {
                 if(acaoAtivaMotivo) {
                     document.getElementById("status").innerText = `PRONTO: Clique nos alunos para aplicar [ ${acaoAtivaMotivo} (${acaoAtivaXP > 0 ? '+' : ''}${acaoAtivaXP} XP) ]`;
@@ -247,157 +251,6 @@
         } catch (error) {
             document.getElementById("status").innerText = `❌ Erro: ${error.message}`;
         }
-    }
-
-    // ==========================================
-    // NOVA FUNÇÃO: MOTOR GERADOR DE PDF
-    // ==========================================
-    async function gerarPDF() {
-        const selecao = document.getElementById("select-aluno-relatorio").value;
-        const area = document.getElementById("area-impressao");
-        document.getElementById("status").innerText = "⏳ Coletando dados do banco para o PDF...";
-        
-        area.innerHTML = ""; // Limpa rascunhos anteriores
-        
-        let nomeArquivo = "Relatorio.pdf";
-
-        if (selecao === "GERAL") {
-            nomeArquivo = "Relatorio_Geral_Turma.pdf";
-            try {
-                const snapshot = await db.collection("alunos").get();
-                if(snapshot.empty) { alert("Nenhum aluno cadastrado no banco."); return; }
-                
-                let listaAlunos = [];
-                snapshot.forEach(doc => {
-                    listaAlunos.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // Ordena alfabeticamente para a lista impressa ficar organizada
-                listaAlunos.sort((a,b) => a.nome.localeCompare(b.nome));
-
-                let htmlContent = `
-                    <div class="pdf-header">
-                        <h2>RELATÓRIO GERAL DE EXPERIÊNCIA (XP)</h2>
-                        <p>Status Geral da Sala de Aula | Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}</p>
-                    </div>
-                    <table class="pdf-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 15%">Código ID</th>
-                                <th>Nome Completo do Aluno</th>
-                                <th style="width: 20%; text-align: center;">XP Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                listaAlunos.forEach(aluno => {
-                    htmlContent += `
-                        <tr>
-                            <td>${aluno.id}</td>
-                            <td>${aluno.nome}</td>
-                            <td style="text-align: center; font-weight: bold;">${aluno.xp_atual || 0} XP</td>
-                        </tr>
-                    `;
-                });
-
-                htmlContent += `</tbody></table>`;
-                area.innerHTML = htmlContent;
-
-            } catch(e) {
-                alert("Erro ao montar relatório geral: " + e.message);
-                return;
-            }
-
-        } else {
-            // Relatório Individualizado por Aluno
-            nomeArquivo = `Relatorio_Individual_${selecao}.pdf`;
-            try {
-                const alunoDoc = await db.collection("alunos").doc(selecao).get();
-                if (!alunoDoc.exists) { 
-                    alert("Este aluno ainda não possui pontuações registradas."); 
-                    return; 
-                }
-                
-                const dadosAluno = alunoDoc.data();
-                
-                // Busca o histórico de ações dele
-                const historicoSnapshot = await db.collection("historico").where("aluno_id", "==", selecao).get();
-                
-                let historicoItens = [];
-                historicoSnapshot.forEach(doc => { historicoItens.push(doc.data()); });
-                
-                // Ordena o PDF do mais recente para o mais antigo
-                historicoItens.sort((a,b) => (b.data ? b.data.toDate() : 0) - (a.data ? a.data.toDate() : 0));
-
-                let htmlContent = `
-                    <div class="pdf-header">
-                        <h2>EXTRATO PEDAGÓGICO INDIVIDUAL</h2>
-                        <p>Acompanhamento de Evolução por Atitudes e Engajamento</p>
-                    </div>
-                    <div style="margin-bottom: 20px; font-size: 14px; background: #f9f9f9; padding: 10px; border-left: 4px solid #34495e;">
-                        <b>Aluno:</b> ${dadosAluno.nome}<br>
-                        <b>Código Identificador:</b> ${selecao}<br>
-                        <b>Pontuação de Experiência Atual:</b> <span style="color:#27ae60; font-weight:bold;">${dadosAluno.xp_atual || 0} XP</span>
-                    </div>
-                    <h3>Histórico de Ocorrências:</h3>
-                    <table class="pdf-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 25%">Data / Hora</th>
-                                <th>Ação / Atitude Detectada</th>
-                                <th>Conteúdo da Aula</th>
-                                <th style="width: 15%">Impacto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                if(historicoItens.length === 0) {
-                    htmlContent += `<tr><td colspan="4" style="text-align:center; color:#777;">Nenhuma ocorrência registrada para este aluno.</td></tr>`;
-                } else {
-                    historicoItens.forEach(item => {
-                        let dataStr = "Sem data";
-                        if(item.data) {
-                            const d = item.data.toDate();
-                            dataStr = d.toLocaleDateString('pt-BR') + " às " + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-                        }
-                        const sinal = item.quantidade > 0 ? "+" : "";
-                        const cor = item.quantidade > 0 ? "green" : "red";
-                        
-                        htmlContent += `
-                            <tr>
-                                <td>${dataStr}</td>
-                                <td>${item.motivo}</td>
-                                <td><i>${item.conteudo || "Não especificado"}</i></td>
-                                <td style="color: ${cor}; font-weight: bold;">${sinal}${item.quantidade} XP</td>
-                            </tr>
-                        `;
-                    });
-                }
-
-                htmlContent += `</tbody></table>`;
-                area.innerHTML = htmlContent;
-
-            } catch(e) {
-                alert("Erro ao montar relatório individual: " + e.message);
-                return;
-            }
-        }
-
-        // Configuração e disparo da biblioteca html2pdf
-        const configuracaoOpt = {
-            margin:       15,
-            filename:     nomeArquivo,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        // Roda a conversão e faz o download automático
-        html2pdf().set(configuracaoOpt).from(area).save().then(() => {
-            document.getElementById("status").innerText = "✅ PDF gerado e baixado com sucesso!";
-        });
     }
 </script>
 </body>
