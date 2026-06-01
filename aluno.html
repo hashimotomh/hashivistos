@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área do Aluno - Consulta de XP</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #eef2f7; padding: 20px; margin: 0; color: #333; }
+        .box { max-width: 500px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; }
+        h3 { color: #34495e; margin-bottom: 15px; text-align: left; font-size: 16px; border-bottom: 2px solid #f1f1f1; padding-bottom: 5px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; text-align: center; }
+        input:focus { border-color: #34495e; outline: none; }
+        button { width: 100%; padding: 12px; background-color: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { background-color: #2c3e50; }
+        .perfil-xp { font-size: 26px; color: #27ae60; font-weight: bold; margin: 20px 0; background: #e8f8f0; padding: 15px; border-radius: 8px; }
+        .extrato { text-align: left; margin-top: 25px; }
+        .container-historico { max-height: 300px; overflow-y: auto; padding-right: 5px; }
+        .item-historico { padding: 12px 8px; border-bottom: 1px solid #f1f1f1; display: flex; justify-content: space-between; font-size: 15px; gap: 10px; }
+        .motivo-texto { font-weight: 600; color: #2c3e50; display: block; }
+        .data-texto { font-size: 11px; color: #7f8c8d; margin-top: 2px; display: block; }
+        .pos { color: #2ecc71; font-weight: bold; white-space: nowrap; }
+        .neg { color: #e74c3c; font-weight: bold; white-space: nowrap; }
+        
+        /* Customização da barra de rolagem do histórico */
+        .container-historico::-webkit-scrollbar { width: 6px; }
+        .container-historico::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .container-historico::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="box" id="login-box">
+    <h2>Área do Herói 🛡️</h2>
+    <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 20px;">Insira suas credenciais para ver seu extrato de experiência.</p>
+    <input type="text" id="codigo-aluno" placeholder="Seu Código Único (Ex: 1001)">
+    <input type="password" id="pin-aluno" placeholder="Seu PIN de 4 dígitos" maxlength="4">
+    <button onclick="autenticarAluno()">Ver Meu Progresso</button>
+    <p id="erro-login" style="color:#e74c3c; display:none; font-weight:bold; margin-top: 15px; font-size: 14px;"></p>
+</div>
+
+<div class="box" id="dashboard-box" style="display:none;">
+    <h2 id="nome-aluno" style="margin-bottom: 5px;">Nome do Aluno</h2>
+    <div class="perfil-xp">Nível Atual: <span id="xp-total">0</span> XP</div>
+    
+    <div class="extrato">
+        <h3>Histórico de Missões:</h3>
+        <div class="container-historico" id="lista-historico">
+            </div>
+    </div>
+    
+    <button style="background-color: #95a5a6; padding: 8px; font-size:13px; width:auto; margin-top: 25px;" onclick="window.location.reload()">Sair / Voltar</button>
+</div>
+
+<script>
+    // Configurações do seu Firebase (Coloque os mesmos dados do seu professor.html)
+   const firebaseConfig = {
+  apiKey: "AIzaSyBtY3gnLGcX9biqtgy9Um7C2e1Y21-DSP8",
+  authDomain: "gamificacao-hashi.firebaseapp.com",
+  projectId: "gamificacao-hashi",
+  storageBucket: "gamificacao-hashi.firebasestorage.app",
+  messagingSenderId: "1019383886413",
+  appId: "1:1019383886413:web:a954f277e096ceef036204",
+  measurementId: "G-XJR45JGEGF"
+};
+    
+    // Inicializar o Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Função de Autenticação por ID e Código PIN
+    async function autenticarAluno() {
+        const id = document.getElementById("codigo-aluno").value.trim();
+        const pin = document.getElementById("pin-aluno").value.trim();
+        const erro = document.getElementById("erro-login");
+
+        if(!id || !pin) { 
+            erro.innerText = "Por favor, preencha todos os campos.";
+            erro.style.display = "block";
+            return; 
+        }
+
+        try {
+            const alunoDoc = await db.collection("alunos").doc(id).get();
+            
+            if(alunoDoc.exists && alunoDoc.data().pin === pin) {
+                erro.style.display = "none";
+                document.getElementById("login-box").style.display = "none";
+                document.getElementById("dashboard-box").style.display = "block";
+                
+                // Exibe os dados consolidados do aluno
+                document.getElementById("nome-aluno").innerText = alunoDoc.data().nome;
+                document.getElementById("xp-total").innerText = alunoDoc.data().xp_atual || 0;
+                
+                // Dispara o carregamento do extrato detalhado
+                carregarHistorico(id);
+            } else {
+                erro.innerText = "Código ou PIN incorretos. Tente novamente.";
+                erro.style.display = "block";
+            }
+        } catch (e) {
+            erro.innerText = "Erro de conexão: " + e.message;
+            erro.style.display = "block";
+        }
+    }
+
+    // Função para carregar o histórico ordenado localmente (evita a criação de índices no Firebase)
+    async function carregarHistorico(alunoId) {
+        const lista = document.getElementById("lista-historico");
+        lista.innerHTML = "";
+        
+        try {
+            const snapshot = await db.collection("historico")
+                .where("aluno_id", "==", alunoId)
+                .get();
+                
+            if(snapshot.empty) {
+                lista.innerHTML = "<p style='color:#777; text-align:center; margin-top:20px;'>Nenhuma ação registrada ainda.</p>";
+                return;
+            }
+
+            let itens = [];
+            snapshot.forEach(doc => {
+                itens.push(doc.data());
+            });
+
+            // Ordena os itens no navegador para que a data mais recente fique no topo
+            itens.sort((a, b) => {
+                const dataA = a.data ? a.data.toDate() : 0;
+                const dataB = b.data ? b.data.toDate() : 0;
+                return dataB - dataA;
+            });
+
+            // Renderiza cada ocorrência na tela do aluno
+            itens.forEach(item => {
+                const sinal = item.quantidade > 0 ? "+" : "";
+                const classe = item.quantidade > 0 ? "pos" : "neg";
+                
+                // Formatação da Data e Hora no padrão brasileiro (DD/MM/AAAA às HH:MM)
+                let dataFormatada = "Sem data registrada";
+                if (item.data) {
+                    const dataObjeto = item.data.toDate();
+                    dataFormatada = dataObjeto.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    }) + " às " + dataObjeto.toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                // Resgata o conteúdo da aula associado
+                const conteudoSalvo = item.conteudo || "Conteúdo não especificado";
+                
+                lista.innerHTML += `
+                    <div class="item-historico">
+                        <div style="display: flex; flex-direction: column; max-width: 80%;">
+                            <span class="motivo-texto">${item.motivo}</span>
+                            <span class="data-texto"><b>Aula:</b> ${conteudoSalvo}</span>
+                            <span class="data-texto">${dataFormatada}</span>
+                        </div>
+                        <span class="${classe}" style="align-self: center;">${sinal}${item.quantidade} XP</span>
+                    </div>
+                `;
+            });
+        } catch(e) {
+            lista.innerHTML = "<p style='color:red; text-align:center;'>Erro ao carregar o histórico das missões.</p>";
+            console.error("Erro detalhado:", e);
+        }
+    }
+</script>
+</body>
+</html>
