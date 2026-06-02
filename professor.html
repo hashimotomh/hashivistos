@@ -35,6 +35,10 @@
         .btn-aluno:hover { background-color: #e2e7e9; transform: translateY(-2px); }
         .btn-aluno:active { transform: translateY(0); }
         
+        /* Estilo especial para o botão de TESTE */
+        .btn-aluno-teste { background-color: #e2e8f0; border: 1px dashed #64748b; color: #475569; }
+        .btn-aluno-teste:hover { background-color: #cbd5e1; }
+        
         /* Animação de clique com sucesso */
         @keyframes piscarSucesso {
             0% { background-color: #2ecc71; color: white; }
@@ -44,169 +48,250 @@
 
         /* Rodapé de Status */
         .barra-status { margin-top: 20px; padding: 12px; background: #34495e; color: white; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; min-height: 20px; }
+
+        /* ========================================================
+           SISTEMA DE POP-UP NOTIFICAÇÃO (TOAST) - FIXO E SEGURO
+           ======================================================== */
+        .popup-notificacao {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background-color: #34495e;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.25);
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            max-width: 85%;
+            transition: opacity 0.2s ease-in-out;
+            opacity: 0;
+        }
+        .popup-notificacao.mostrar {
+            display: flex !important;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .popup-sucesso { background-color: #2ecc71 !important; border: 1px solid #27ae60; }
+        .popup-erro { background-color: #e74c3c !important; border: 1px solid #c0392b; }
+        .popup-carregando { background-color: #f39c12 !important; border: 1px solid #d35400; }
     </style>
 </head>
 <body>
 
+<div id="popup-alerta" class="popup-notificacao"></div>
+
 <div class="container">
-	<div id="login-professor-box" style="max-width: 400px; margin: 40px auto; background: #fff; padding: 25px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center;">
+    <div id="login-professor-box" style="max-width: 400px; margin: 40px auto; background: #fff; padding: 25px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center;">
         <h2 style="margin-top:0; color:#34495e;">Login do Professor</h2>
         <input type="email" id="email-prof" placeholder="Seu e-mail do Firebase" class="input-conteudo" style="margin-bottom: 10px; text-align: center;">
         <input type="password" id="senha-prof" placeholder="Sua senha do Firebase" class="input-conteudo" style="margin-bottom: 15px; text-align: center;">
-        <button onclick="fazerLoginProfessor()" style="width: 100%; padding: 12px; background-color: #34495e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Entrar no Painel</button>
+        <button id="btn-entrar" onclick="fazerLoginProfessor()" style="width: 100%; padding: 12px; background-color: #34495e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Entrar no Painel</button>
         <p id="erro-login-prof" style="color:#e74c3c; display:none; font-weight:bold; margin-top:10px; font-size:13px;"></p>
     </div>
 
     <div id="painel-professor-conteudo" style="display: none;">
-    <h1>Painel de Controle Gamificado ⚡</h1>
-    
-    <div class="secao-titulo">Conteúdo da Aula (Opcional)</div>
-    <div>
-        <input type="text" id="conteudo-aula" placeholder="Ex: Equações de 2º Grau / Leitura do capítulo 3" class="input-conteudo">
-    </div>
-    
-    <div class="secao-titulo">1. Selecione a Ocorrência Ativa</div>
-    <div class="grid-ocorrencias">
-        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Lição Concluída', 15)">
-            <span>📝 Lição Casa</span><span class="xp-tag">+15 XP</span>
-        </button>
-        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Participação Ativa', 10)">
-            <span>🙋 Participação</span><span class="xp-tag">+10 XP</span>
-        </button>
-        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Tirou Dúvida', 10)">
-            <span>💡 Tirou Dúvida</span><span class="xp-tag">+10 XP</span>
-        </button>
-        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Material Completo', 5)">
-            <span>🎒 Material Ok</span><span class="xp-tag">+5 XP</span>
-        </button>
-        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Foco e Producão', 10)">
-            <span>🎯 Foco Total</span><span class="xp-tag">+10 XP</span>
-        </button>
-        <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Colaboração Extra', 20)">
-            <span>🤝 Trabalho Equipe</span><span class="xp-tag">+20 XP</span>
-        </button>
+        <h1>Painel de Controle Gamificado ⚡</h1>
+        
+        <div class="secao-titulo">Conteúdo da Aula (Opcional)</div>
+        <div>
+            <input type="text" id="conteudo-aula" placeholder="Ex: Equações de 2º Grau / Leitura do capítulo 3" class="input-conteudo">
+        </div>
+        
+        <div class="secao-titulo">1. Selecione a Ocorrência Ativa</div>
+        <div class="grid-ocorrencias">
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Lição Concluída', 15)">
+                <span>📝 Lição Casa</span><span class="xp-tag">+15 XP</span>
+            </button>
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Lição do dia', 10)">
+                <span>📖 Lição do dia</span><span class="xp-tag">+10 XP</span>
+            </button>
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Participação Ativa', 10)">
+                <span>🙋 Participação</span><span class="xp-tag">+10 XP</span>
+            </button>
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Tirou Dúvida', 10)">
+                <span>💡 Tirou Dúvida</span><span class="xp-tag">+10 XP</span>
+            </button>
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Material Completo', 5)">
+                <span>🎒 Material Ok</span><span class="xp-tag">+5 XP</span>
+            </button>
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Foco e Producão', 10)">
+                <span>🎯 Foco Total</span><span class="xp-tag">+10 XP</span>
+            </button>
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Colaboração Extra', 20)">
+                <span>🤝 Trabalho Equipe</span><span class="xp-tag">+20 XP</span>
+            </button>
+            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Ajudou o colega', 15)">
+                <span>😇 Ajudou colega</span><span class="xp-tag">+15 XP</span>
+            </button>
 
-        <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Lição Incompleta', -15)">
-            <span>❌ Sem Lição</span><span class="xp-tag">-15 XP</span>
-        </button>
-        <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Excesso de Conversa', -10)">
-            <span>💬 Conversa</span><span class="xp-tag">-10 XP</span>
-        </button>
-        <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Atrapalhou a Aula', -10)">
-            <span>🛑 Atrapalhou</span><span class="xp-tag">-10 XP</span>
-        </button>
-        <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Bagunça / Distração', -15)">
-            <span>🏃 Bagunça</span><span class="xp-tag">-15 XP</span>
-        </button>
-        <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Uso de Celular', -10)">
-            <span>📱 Celular</span><span class="xp-tag">-10 XP</span>
-        </button>
-        <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Sem Material', -5)">
-            <span>✏️ Sem Material</span><span class="xp-tag">-5 XP</span>
-        </button>
-    </div>
+            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Lição Incompleta', -15)">
+                <span>❌ Sem Lição</span><span class="xp-tag">-15 XP</span>
+            </button>
+            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Excesso de Conversa', -10)">
+                <span>💬 Conversa</span><span class="xp-tag">-10 XP</span>
+            </button>
+            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Atrapalhou a Aula', -10)">
+                <span>🛑 Atrapalhou</span><span class="xp-tag">-10 XP</span>
+            </button>
+            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Bagunça / Distração', -15)">
+                <span>🏃 Bagunça</span><span class="xp-tag">-15 XP</span>
+            </button>
+            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Uso de Celular', -10)">
+                <span>📱 Celular</span><span class="xp-tag">-10 XP</span>
+            </button>
+            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Sem Material', -5)">
+                <span>✏️ Sem Material</span><span class="xp-tag">-5 XP</span>
+            </button>
+            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Não trouxe livro', -5)">
+                <span>📘 Sem Livro</span><span class="xp-tag">-5 XP</span>
+            </button>
+        </div>
 
-    <div class="secao-titulo">2. Clique no Aluno para Computar</div>
-    <div class="grid-alunos">
-        <button class="btn-aluno" onclick="computarPonto(this, '1001', 'ALYCE FERNANDA CASONI DO NASCIMENTO')"><span>1. Alyce F.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1002', 'ANA CLARA FERREIRA DE OLIVEIRA')"><span>2. Ana Clara</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1003', 'ANA JÚLIA DANGL TABET')"><span>3. Ana Júlia</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1004', 'ANGEL RUBEN HIGUERA MARCANO')"><span>4. Angel R.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1005', 'ARTHUR ESCHEMBACH SILVA')"><span>5. Arthur E.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1006', 'BRUNO MIGUEL FRANCO DE MORAES')"><span>6. Bruno M.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1007', 'CLARA REIS FERNANDES DO VALE')"><span>7. Clara R.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1008', 'DAFNE LOMES PACIENCIA')"><span>8. Dafne L.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1009', 'DAVI LUCCA LEME DE SOUZA')"><span>9. Davi Lucca</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1010', 'DAVI SANTOS DAMO')"><span>10. Davi S.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1011', 'EVELLYN DE OLIVEIRA BERTANE')"><span>11. Evellyn O.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1012', 'GIOVANA CUNHA MOTA')"><span>12. Giovana C.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1013', 'GUILHERME DONATO MATTOS DE PAULA')"><span>13. Guilherme D.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1014', 'HEITOR DANIEL DE CAMARGO SILVA')"><span>14. Heitor D.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1015', 'ISAAC MATHEUS SANTOS DA SILVA')"><span>15. Isaac M.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1016', 'ISABELLY COLONIA DE SOUZA')"><span>16. Isabelly C.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1017', 'IZABELLE COSTA SANTOS')"><span>17. Izabelle C.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1018', 'JASMINY KARLA SANTANA DE ALMEIDA')"><span>18. Jasminy K.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1019', 'JULIO VINICIUS PALMEIRA GHIRARDELLI')"><span>19. Julio V.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1020', 'KAUÃ AUGUSTO DE SOUZA')"><span>20. Kauã A.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1021', 'LORENZO SANTOS SAVI')"><span>21. Lorenzo S.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1022', 'MARIA CLARA LEMOS ALMEIDA')"><span>22. Maria Clara</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1023', 'MIGUEL HENRIQUE BOONEN EUGENIO')"><span>23. Miguel H.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1024', 'MURILO HENRIQUE DA SILVA CITRAN')"><span>24. Murilo H.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1025', 'NICOLAS RAFAEL DIONISIO TRIQUEIROS')"><span>25. Nicolas R.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1026', 'OLIVIA FERREIRA PRESTES')"><span>26. Olivia F.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1027', 'OTÁVIO BARBOSA SILVA')"><span>27. Otávio B.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1028', 'PIETRA LABELLA MOREIRA SANTOS')"><span>28. Pietra L.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1029', 'RYAN LUCAS NASCIMENTO SANTOS')"><span>29. Ryan L.</span></button>
-        <button class="btn-aluno" onclick="computarPonto(this, '1030', 'SOFIA DA COSTA AMPARO')"><span>30. Sofia C.</span></button>
-    </div>
+        <div class="secao-titulo">2. Clique no Aluno para Computar</div>
+        <div class="grid-alunos">
+            <button class="btn-aluno btn-aluno-teste" onclick="computarPonto(this, '9999', 'TESTE DO SISTEMA')"><span>⚙️ ALUNO TESTE</span></button>
+            
+            <button class="btn-aluno" onclick="computarPonto(this, '1001', 'ALYCE FERNANDA CASONI DO NASCIMENTO')"><span>1. Alyce F.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1002', 'ANA CLARA FERREIRA DE OLIVEIRA')"><span>2. Ana Clara</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1003', 'ANA JÚLIA DANGL TABET')"><span>3. Ana Júlia</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1004', 'ANGEL RUBEN HIGUERA MARCANO')"><span>4. Angel R.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1005', 'ARTHUR ESCHEMBACH SILVA')"><span>5. Arthur E.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1006', 'BRUNO MIGUEL FRANCO DE MORAES')"><span>6. Bruno M.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1007', 'CLARA REIS FERNANDES DO VALE')"><span>7. Clara R.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1008', 'DAFNE LOMES PACIENCIA')"><span>8. Dafne L.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1009', 'DAVI LUCCA LEME DE SOUZA')"><span>9. Davi Lucca</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1010', 'DAVI SANTOS DAMO')"><span>10. Davi S.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1011', 'EVELLYN DE OLIVEIRA BERTANE')"><span>11. Evellyn O.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1012', 'GIOVANA CUNHA MOTA')"><span>12. Giovana C.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1013', 'GUILHERME DONATO MATTOS DE PAULA')"><span>13. Guilherme D.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1014', 'HEITOR DANIEL DE CAMARGO SILVA')"><span>14. Heitor D.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1015', 'ISAAC MATHEUS SANTOS DA SILVA')"><span>15. Isaac M.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1016', 'ISABELLY COLONIA DE SOUZA')"><span>16. Isabelly C.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1017', 'IZABELLE COSTA SANTOS')"><span>17. Izabelle C.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1018', 'JASMINY KARLA SANTANA DE ALMEIDA')"><span>18. Jasminy K.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1019', 'JULIO VINICIUS PALMEIRA GHIRARDELLI')"><span>19. Julio V.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1020', 'KAUÃ AUGUSTO DE SOUZA')"><span>20. Kauã A.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1021', 'LORENZO SANTOS SAVI')"><span>21. Lorenzo S.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1022', 'MARIA CLARA LEMOS ALMEIDA')"><span>22. Maria Clara</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1023', 'MIGUEL HENRIQUE BOONEN EUGENIO')"><span>23. Miguel H.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1024', 'MURILO HENRIQUE DA SILVA CITRAN')"><span>24. Murilo H.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1025', 'NICOLAS RAFAEL DIONISIO TRIQUEIROS')"><span>25. Nicolas R.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1026', 'OLIVIA FERREIRA PRESTES')"><span>26. Olivia F.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1027', 'OTÁVIO BARBOSA SILVA')"><span>27. Otávio B.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1028', 'PIETRA LABELLA MOREIRA SANTOS')"><span>28. Pietra L.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1029', 'RYAN LUCAS NASCIMENTO SANTOS')"><span>29. Ryan L.</span></button>
+            <button class="btn-aluno" onclick="computarPonto(this, '1030', 'SOFIA DA COSTA AMPARO')"><span>30. Sofia C.</span></button>
+        </div>
 
-    <div class="barra-status" id="status">Aguardando seleção de ocorrência...</div>
+        <div class="barra-status" id="status">Aguardando seleção de ocorrência...</div>
+    </div>
 </div>
 
 <script>
-    // Configurações do seu Firebase (Cole aqui as chaves do seu projeto)
     const firebaseConfig = {
-  apiKey: "AIzaSyBtY3gnLGcX9biqtgy9Um7C2e1Y21-DSP8",
-  authDomain: "gamificacao-hashi.firebaseapp.com",
-  projectId: "gamificacao-hashi",
-  storageBucket: "gamificacao-hashi.firebasestorage.app",
-  messagingSenderId: "1019383886413",
-  appId: "1:1019383886413:web:a954f277e096ceef036204",
-  measurementId: "G-XJR45JGEGF"
-};
+        apiKey: "AIzaSyBtY3gnLGcX9biqtgy9Um7C2e1Y21-DSP8",
+        authDomain: "gamificacao-hashi.firebaseapp.com",
+        projectId: "gamificacao-hashi",
+        storageBucket: "gamificacao-hashi.firebasestorage.app",
+        messagingSenderId: "1019383886413",
+        appId: "1:1019383886413:web:a954f277e096ceef036204",
+        measurementId: "G-XJR45JGEGF"
+    };
     
-    // Inicializar o Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const auth = firebase.auth(); // <--- Força a criação da instância de autenticação aqui
+    const auth = firebase.auth();
 
-    // Função para autenticar o professor antes de liberar o painel
-    async function fazerLoginProfessor() {
-        const email = document.getElementById("email-prof").value.trim();
-        const senha = document.getElementById("senha-prof").value.trim();
-        const erro = document.getElementById("erro-login-prof");
-
-        try {
-            // Usa a instância direta 'auth' que criamos lá em cima
-            await auth.signInWithEmailAndPassword(email, senha);
-            
-            // Se der certo, oculta a tela de login e mostra o painel de pontos
-            document.getElementById("login-professor-box").style.display = "none";
-            document.getElementById("painel-professor-conteudo").style.display = "block";
-            document.getElementById("status").innerText = "Aguardando seleção de ocorrência...";
-        } catch (e) {
-            erro.innerText = "Falha na autenticação: " + e.message;
-            erro.style.display = "block";
+    function lancarPopUp(texto, tipo) {
+        const popup = document.getElementById("popup-alerta");
+        if (!popup) return;
+        
+        popup.innerText = texto;
+        popup.className = "popup-notificacao";
+        
+        if(tipo === "sucesso") popup.classList.add("popup-sucesso");
+        if(tipo === "erro") popup.classList.add("popup-erro");
+        if(tipo === "carregando") popup.classList.add("popup-carregando");
+        
+        popup.classList.add("mostrar");
+        
+        if(tipo !== "carregando") {
+            setTimeout(() => {
+                popup.classList.remove("mostrar");
+            }, 2000);
         }
     }
 
-    // Variáveis globais para armazenar o estado selecionado
+    document.getElementById("senha-prof").addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            fazerLoginProfessor();
+        }
+    });
+
+    async function fazerLoginProfessor() {
+        const email = document.getElementById("email-prof").value.trim();
+        const senha = document.getElementById("senha-prof").value.trim();
+        const erroBox = document.getElementById("erro-login-prof");
+
+        if(!email || !senha) {
+            erroBox.innerText = "Por favor, preencha o e-mail e a senha.";
+            erroBox.style.display = "block";
+            return;
+        }
+
+        erroBox.style.display = "none";
+        document.getElementById("btn-entrar").innerText = "Carregando...";
+
+        try {
+            await auth.signInWithEmailAndPassword(email, senha);
+            
+            document.getElementById("login-professor-box").style.display = "none";
+            document.getElementById("painel-professor-conteudo").style.display = "block";
+            document.getElementById("status").innerText = "Aguardando seleção de ocorrência...";
+            
+            lancarPopUp("🔓 Painel Liberado!", "sucesso");
+        } catch (e) {
+            document.getElementById("btn-entrar").innerText = "Entrar no Painel";
+            erroBox.innerText = "Falha na autenticação: " + e.message;
+            erroBox.style.display = "block";
+        }
+    }
+
     let acaoAtivaMotivo = "";
     let acaoAtivaXP = 0;
 
     function selecionarOcorrencia(botao, motivo, xp) {
-        // Remove o destaque visual de todos os botões de ação
         document.querySelectorAll('.btn-acao').forEach(b => b.classList.remove('ativo'));
-        
-        // Aplica o destaque no botão selecionado
         botao.classList.add('ativo');
         
-        // Define as variáveis globais
         acaoAtivaMotivo = motivo;
         acaoAtivaXP = xp;
         
         const statusTxt = `PRONTO: Clique nos alunos para aplicar [ ${motivo} (${xp > 0 ? '+' : ''}${xp} XP) ]`;
         document.getElementById("status").innerText = statusTxt;
+        
+        lancarPopUp(`Ação: ${motivo}`, "sucesso");
     }
 
     async function computarPonto(botaoAluno, id, nomeCompleto) {
         if (!acaoAtivaMotivo) {
             document.getElementById("status").innerText = "⚠️ ERRO: Selecione uma ocorrência no topo primeiro!";
+            lancarPopUp("⚠️ Escolha uma ocorrência primeiro!", "erro");
             return;
         }
 
         const conteudoAula = document.getElementById("conteudo-aula").value.trim();
         document.getElementById("status").innerText = `💾 Gravando para ${nomeCompleto}...`;
+        
+        const primeiroNome = nomeCompleto.split(' ')[0];
+        lancarPopUp(`⏳ Salvando ${primeiroNome}...`, "carregando");
 
         try {
             const alunoRef = db.collection("alunos").doc(id);
@@ -217,14 +302,13 @@
                 
                 if (doc.exists) {
                     novoXp = (doc.data().xp_atual || 0) + acaoAtivaXP;
-                    if(novoXp < 0) novoXp = 0; // Proteção contra XP negativo
+                    if(novoXp < 0) novoXp = 0; 
                     transaction.update(alunoRef, { xp_atual: novoXp, nome: nomeCompleto });
                 } else {
                     if(novoXp < 0) novoXp = 0;
                     transaction.set(alunoRef, { nome: nomeCompleto, xp_atual: novoXp, pin: "1234" });
                 }
 
-                // Cria o registro no histórico salvando o Conteúdo da Aula digitado
                 const historicoRef = db.collection("historico").doc();
                 transaction.set(historicoRef, {
                     aluno_id: id,
@@ -235,13 +319,12 @@
                 });
             });
 
-            // Efeito visual rápido de piscar verde para confirmar o clique
             botaoAluno.classList.add('piscar');
             setTimeout(() => botaoAluno.classList.remove('piscar'), 600);
 
+            lancarPopUp(`✅ ${primeiroNome}: ${acaoAtivaXP > 0 ? '+' : ''}${acaoAtivaXP} XP!`, "sucesso");
             document.getElementById("status").innerText = `✅ Sucesso! ${acaoAtivaMotivo} computado para ${nomeCompleto}.`;
             
-            // Restaura o texto informativo para manter o fluxo contínuo de cliques
             setTimeout(() => {
                 if(acaoAtivaMotivo) {
                     document.getElementById("status").innerText = `PRONTO: Clique nos alunos para aplicar [ ${acaoAtivaMotivo} (${acaoAtivaXP > 0 ? '+' : ''}${acaoAtivaXP} XP) ]`;
@@ -250,6 +333,7 @@
 
         } catch (error) {
             document.getElementById("status").innerText = `❌ Erro: ${error.message}`;
+            lancarPopUp("❌ Falha de Conexão!", "erro");
         }
     }
 </script>
