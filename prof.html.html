@@ -82,7 +82,10 @@
     <div id="painel-professor-conteudo" style="display: none;">
         <h1>Acompanhamento de Aulas 📝</h1>
         
-        <button id="btn-importar-alunos" onclick="importarAlunosParaBanco()" style="background:#8e44ad; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:15px; width:100%; font-size:14px;">⚡ Enviar Alunos Mantendo a Ordem Exata de Matrícula</button>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <button id="btn-importar-alunos" onclick="importarAlunosParaBanco()" style="background:#8e44ad; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; flex: 1; font-size:13px;">⚡ Enviar Alunos Mantendo a Ordem Exata</button>
+            <button onclick="migrarHistoricoParaOcorrencias()" style="background:#6c5ce7; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; flex: 1; font-size:13px;">🔄 Copiar dados do 'historico' para 'ocorrencias_aulas'</button>
+        </div>
 
         <div class="secao-titulo">1. Selecione a Turma</div>
         <div class="flex-linha">
@@ -147,6 +150,7 @@
 
     let ocorrenciaAtiva = "";
     const COLECAO_ALUNOS = "alunos_novos";
+    const COLECAO_OCORRENCIAS = "ocorrencias_aulas";
 
     const LISTA_ALUNOS_PILOTO = [
       { chamacode: 1, nome: "ALANA MARQUES DA SILVA", email: "00001206348240sp@al.educacao.sp.gov.br", turma: "1F" },
@@ -502,7 +506,7 @@
         if (!turma || !atividade) return;
 
         try {
-            const snapshot = await db.collection("historico")
+            const snapshot = await db.collection(COLECAO_OCORRENCIAS)
                                     .where("turma", "==", turma)
                                     .where("atividade", "==", atividade)
                                     .where("ocorrencia", "==", "Lição de Sala feita")
@@ -577,6 +581,49 @@
         }
     }
 
+    // =======================================================
+    // FUNÇÃO DE MIGRAÇÃO: Transferir 'historico' -> 'ocorrencias_aulas'
+    // =======================================================
+    async function migrarHistoricoParaOcorrencias() {
+        if (!confirm("Deseja copiar todos os registros da coleção 'historico' para 'ocorrencias_aulas'?")) return;
+
+        lancarPopUp("Copiando registros...", "carregando");
+
+        try {
+            const snapHistorico = await db.collection("historico").get();
+
+            if (snapHistorico.empty) {
+                lancarPopUp("Coleção 'historico' está vazia!", "erro");
+                return;
+            }
+
+            let cont = 0;
+            const batch = db.batch();
+
+            snapHistorico.forEach(doc => {
+                const data = doc.data();
+                // Cria um novo documento em ocorrencias_aulas com os mesmos dados
+                const newRef = db.collection(COLECAO_OCORRENCIAS).doc();
+                batch.set(newRef, data);
+                cont++;
+            });
+
+            await batch.commit();
+
+            lancarPopUp(`✅ ${cont} registros copiados com sucesso!`, "sucesso");
+            document.getElementById("status").innerText = `✅ Migração concluída: ${cont} registros movidos para 'ocorrencias_aulas'.`;
+
+            // Recarrega os dados caso já tenha uma turma selecionada
+            if (document.getElementById("select-turma").value) {
+                marcarAlunosComLicaoFeita();
+            }
+
+        } catch (e) {
+            console.error("Erro na migração:", e);
+            lancarPopUp("Erro na migração: " + e.message, "erro");
+        }
+    }
+
     function selecionarOcorrencia(botao, ocorrencia) {
         document.querySelectorAll('.btn-acao').forEach(b => b.classList.remove('ativo'));
         botao.classList.add('ativo');
@@ -602,7 +649,7 @@
         lancarPopUp(`Gravando para ${nomeAluno}...`, "carregando");
 
         try {
-            await db.collection("historico").add({
+            await db.collection(COLECAO_OCORRENCIAS).add({
                 aluno_id: alunoId,
                 aluno_nome: nomeAluno,
                 turma: turma,
@@ -683,8 +730,8 @@
                 if(a.nome !== "Geral/Aula") listaAtividades.push(a.nome);
             });
 
-            // 3. Buscar Histórico
-            let snapHist = await db.collection("historico")
+            // 3. Buscar Ocorrências das Aulas
+            let snapHist = await db.collection(COLECAO_OCORRENCIAS)
                                    .where("turma", "==", turma)
                                    .get();
 
@@ -725,17 +772,14 @@
                 const key = aluno.email || aluno.nome;
                 const info = dadosAlunos[key];
 
-                // Objeto por linha da planilha
                 let linha = {
                     "Aluno": info.nome
                 };
 
-                // Adiciona Atividades como Colunas
                 listaAtividades.forEach(ativ => {
                     linha[ativ] = info.licoes[ativ] ? "SIM" : "NÃO";
                 });
 
-                // Adiciona as Ocorrências Finais
                 linha["Plataformas Feitas"] = info.plataforma;
                 linha["Não Trouxe Material"] = info.semMaterial;
                 linha["Desrespeito"] = info.desrespeito;
@@ -747,8 +791,7 @@
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
 
-            // Ajustar largura automática das colunas
-            const colWidths = [{ wch: 35 }]; // Coluna do Aluno mais larga
+            const colWidths = [{ wch: 35 }];
             listaAtividades.forEach(() => colWidths.push({ wch: 18 }));
             colWidths.push({ wch: 18 }, { wch: 18 }, { wch: 15 });
             ws['!cols'] = colWidths;
