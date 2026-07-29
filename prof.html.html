@@ -84,7 +84,6 @@
         
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
             <button id="btn-importar-alunos" onclick="importarAlunosParaBanco()" style="background:#8e44ad; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; flex: 1; font-size:13px;">⚡ Enviar Alunos Mantendo a Ordem Exata</button>
-            <button onclick="migrarHistoricoParaOcorrencias()" style="background:#6c5ce7; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; flex: 1; font-size:13px;">🔄 Copiar dados do 'historico' para 'ocorrencias_aulas'</button>
         </div>
 
         <div class="secao-titulo">1. Selecione a Turma</div>
@@ -150,7 +149,7 @@
 
     let ocorrenciaAtiva = "";
     const COLECAO_ALUNOS = "alunos_novos";
-    const COLECAO_OCORRENCIAS = "ocorrencias_aulas";
+    const COLECAO_OCORRENCIAS = "ocorrencias_aulas"; // <--- COLEÇÃO OFICIAL
 
     const LISTA_ALUNOS_PILOTO = [
       { chamacode: 1, nome: "ALANA MARQUES DA SILVA", email: "00001206348240sp@al.educacao.sp.gov.br", turma: "1F" },
@@ -506,6 +505,7 @@
         if (!turma || !atividade) return;
 
         try {
+            // Busca apenas em ocorrencias_aulas
             const snapshot = await db.collection(COLECAO_OCORRENCIAS)
                                     .where("turma", "==", turma)
                                     .where("atividade", "==", atividade)
@@ -581,49 +581,6 @@
         }
     }
 
-    // =======================================================
-    // FUNÇÃO DE MIGRAÇÃO: Transferir 'historico' -> 'ocorrencias_aulas'
-    // =======================================================
-    async function migrarHistoricoParaOcorrencias() {
-        if (!confirm("Deseja copiar todos os registros da coleção 'historico' para 'ocorrencias_aulas'?")) return;
-
-        lancarPopUp("Copiando registros...", "carregando");
-
-        try {
-            const snapHistorico = await db.collection("historico").get();
-
-            if (snapHistorico.empty) {
-                lancarPopUp("Coleção 'historico' está vazia!", "erro");
-                return;
-            }
-
-            let cont = 0;
-            const batch = db.batch();
-
-            snapHistorico.forEach(doc => {
-                const data = doc.data();
-                // Cria um novo documento em ocorrencias_aulas com os mesmos dados
-                const newRef = db.collection(COLECAO_OCORRENCIAS).doc();
-                batch.set(newRef, data);
-                cont++;
-            });
-
-            await batch.commit();
-
-            lancarPopUp(`✅ ${cont} registros copiados com sucesso!`, "sucesso");
-            document.getElementById("status").innerText = `✅ Migração concluída: ${cont} registros movidos para 'ocorrencias_aulas'.`;
-
-            // Recarrega os dados caso já tenha uma turma selecionada
-            if (document.getElementById("select-turma").value) {
-                marcarAlunosComLicaoFeita();
-            }
-
-        } catch (e) {
-            console.error("Erro na migração:", e);
-            lancarPopUp("Erro na migração: " + e.message, "erro");
-        }
-    }
-
     function selecionarOcorrencia(botao, ocorrencia) {
         document.querySelectorAll('.btn-acao').forEach(b => b.classList.remove('ativo'));
         botao.classList.add('ativo');
@@ -649,6 +606,7 @@
         lancarPopUp(`Gravando para ${nomeAluno}...`, "carregando");
 
         try {
+            // Gravação feita diretamente em ocorrencias_aulas
             await db.collection(COLECAO_OCORRENCIAS).add({
                 aluno_id: alunoId,
                 aluno_nome: nomeAluno,
@@ -680,7 +638,7 @@
     }
 
     // =======================================================
-    // FUNÇÃO PARA GERAR A PLANILHA EM EXCEL (.XLSX) OU CSV
+    // GERAR RELATÓRIO EXCEL/CSV (Consultando apenas ocorrencias_aulas)
     // =======================================================
     async function gerarRelatorioPlanilha(formato) {
         const turma = document.getElementById("select-turma").value;
@@ -730,7 +688,7 @@
                 if(a.nome !== "Geral/Aula") listaAtividades.push(a.nome);
             });
 
-            // 3. Buscar Ocorrências das Aulas
+            // 3. Buscar Ocorrências exclusivamente da coleção ocorrencias_aulas
             let snapHist = await db.collection(COLECAO_OCORRENCIAS)
                                    .where("turma", "==", turma)
                                    .get();
@@ -765,7 +723,7 @@
                 }
             });
 
-            // 4. Montar Matriz de Objetos (JSON) para a Planilha
+            // 4. Montar Matriz para Exportação
             let dadosPlanilha = [];
 
             listaAlunos.forEach(aluno => {
@@ -787,7 +745,7 @@
                 dadosPlanilha.push(linha);
             });
 
-            // 5. Criar Planilha com SheetJS
+            // 5. Download com SheetJS
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
 
@@ -798,7 +756,6 @@
 
             XLSX.utils.book_append_sheet(wb, ws, `Turma ${turma}`);
 
-            // 6. Fazer o Download
             const nomeArquivo = `Relatorio_Desempenho_${turma}_${new Date().toISOString().split('T')[0]}`;
 
             if (formato === 'csv') {
