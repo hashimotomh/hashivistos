@@ -47,7 +47,6 @@
             position: relative;
         }
 
-        /* Top Header */
         header {
             padding: 20px;
             border-bottom: 2px solid var(--border);
@@ -95,7 +94,6 @@
             box-shadow: 0 4px 0 var(--secondary-dark);
         }
 
-        /* Progress Bar */
         .progress-wrapper {
             display: flex;
             align-items: center;
@@ -127,7 +125,6 @@
             text-align: right;
         }
 
-        /* Main Content */
         main {
             flex-grow: 1;
             padding: 30px 20px;
@@ -156,7 +153,6 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
 
-        /* Response Workspace */
         .workspace-area {
             display: flex;
             flex-direction: column;
@@ -208,7 +204,6 @@
             background: var(--error-bg);
         }
 
-        /* Cards & Keyboard */
         .interactive-area {
             margin-top: auto;
             display: flex;
@@ -252,7 +247,6 @@
             pointer-events: none;
         }
 
-        /* Virtual Keyboard */
         .virtual-keyboard {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -300,7 +294,6 @@
             box-shadow: 0 3px 0 #ffc9c9;
         }
 
-        /* Bottom Footer / Feedback Bar */
         footer {
             padding: 20px;
             border-top: 2px solid var(--border);
@@ -309,8 +302,6 @@
             justify-content: space-between;
             align-items: center;
             min-height: 90px;
-            border-bottom-left-radius: 16px;
-            border-bottom-right-radius: 16px;
         }
 
         .feedback-message {
@@ -334,12 +325,6 @@
             text-align: center;
         }
 
-        .action-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 1px 0 var(--primary-dark);
-        }
-
-        /* Footer States */
         footer.correct {
             background-color: var(--success-bg);
             border-top-color: #b8f28b;
@@ -394,7 +379,6 @@
 
         <div class="workspace-area">
             <button class="clear-btn" onclick="clearCurrentAnswer()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 Limpar
             </button>
             <div class="response-line" id="response-box-easy"></div>
@@ -402,10 +386,8 @@
         </div>
 
         <div class="interactive-area">
-            <!-- Easy Mode Area -->
             <div class="cards-grid" id="cards-container"></div>
 
-            <!-- Hard Mode Area -->
             <div class="virtual-keyboard" id="keyboard-container" style="display: none;">
                 <button class="key" onclick="pressKey('1')">1</button>
                 <button class="key" onclick="pressKey('2')">2</button>
@@ -420,7 +402,7 @@
                 <button class="key" onclick="pressKey('7')">7</button>
                 <button class="key" onclick="pressKey('8')">8</button>
                 <button class="key" onclick="pressKey('9')">9</button>
-                <button class="key op-key" onclick="pressKey('*')">*</button>
+                <button class="key op-key" onclick="pressKey('·')">·</button>
                 
                 <button class="key" onclick="pressKey('0')">0</button>
                 <button class="key var-key" onclick="pressKey('x')">x</button>
@@ -433,7 +415,7 @@
                 <button class="key op-key" onclick="pressKey(')')">)</button>
 
                 <button class="key op-key" onclick="pressKey('^')">^</button>
-                <button class="key" style="grid-column: span 3;" class="key backspace" onclick="pressKey('backspace')">Apagar ⌫</button>
+                <button class="key backspace" style="grid-column: span 3;" onclick="pressKey('backspace')">Apagar ⌫</button>
             </div>
         </div>
     </main>
@@ -445,13 +427,64 @@
 </div>
 
 <script>
-    const desafios = [{"frase": "O dobro de um n\u00famero x mais cinco", "expressao": "2x+5", "var": "x"}, {"frase": "O triplo de um n\u00famero n menos dois", "expressao": "3n-2", "var": "n"}, {"frase": "A metade de um n\u00famero y mais sete", "expressao": "y/2+7", "var": "y"}, {"frase": "O qu\u00e1druplo de um n\u00famero a adicionado a nove", "expressao": "4a+9", "var": "a"}, {"frase": "A ter\u00e7a parte de x subtra\u00edda de dez", "expressao": "10-x/3", "var": "x"}, {"frase": "O dobro da soma de x com tr\u00eas", "expressao": "2*(x+3)", "var": "x"}, {"frase": "O quadrado de um n\u00famero n mais um", "expressao": "n^2+1", "var": "n"}, {"frase": "A diferen\u00e7a entre o triplo de x e quatro", "expressao": "3x-4", "var": "x"}, {"frase": "O qu\u00edntuplo de um n\u00famero z mais o seu triplo", "expressao": "5z+3z", "var": "z"}, {"frase": "Um n\u00famero y diminu\u00eddo de oito", "expressao": "y-8", "var": "y"}, {"frase": "A soma de um n\u00famero x com o seu dobro", "expressao": "x+2x", "var": "x"}, {"frase": "O triplo de um n\u00famero a mais a sua metade", "expressao": "3a+a/2", "var": "a"}, {"frase": "Subtrair seis do qu\u00e1druplo de n", "expressao": "4n-6", "var": "n"}, {"frase": "Adicionar cinco \u00e0 quarta parte de x", "expressao": "x/4+5", "var": "x"}, {"frase": "O dobro de um n\u00famero y mais o triplo de outro n\u00famero z", "expressao": "2y+3z", "var": "y"}, {"frase": "A diferen\u00e7a entre dez e o dobro de n", "expressao": "10-2n", "var": "n"}, {"frase": "O triplo da diferen\u00e7a entre x e cinco", "expressao": "3*(x-5)", "var": "x"}, {"frase": "Um n\u00famero n somado com o seu consecutivo", "expressao": "n+(n+1)", "var": "n"}, {"frase": "A soma de tr\u00eas n\u00fameros consecutivos iniciando em x", "expressao": "x+(x+1)+(x+2)", "var": "x"}, {"frase": "O produto de quatro pelo quadrado de y", "expressao": "4y^2", "var": "y"}, {"frase": "O cubo de um n\u00famero a menos cinco", "expressao": "a^3-5", "var": "a"}, {"frase": "A quinta parte de um n\u00famero z mais dois", "expressao": "z/5+2", "var": "z"}, {"frase": "O dobro de x elevado ao quadrado", "expressao": "(2x)^2", "var": "x"}, {"frase": "O triplo de y adicionado a doze", "expressao": "3y+12", "var": "y"}, {"frase": "Sete menos a ter\u00e7a parte de n", "expressao": "7-n/3", "var": "n"}, {"frase": "O qu\u00e1druplo da soma de um n\u00famero com um", "expressao": "4*(x+1)", "var": "x"}, {"frase": "A soma do quadrado de x com o quadrado de y", "expressao": "x^2+y^2", "var": "x"}, {"frase": "A diferen\u00e7a entre os quadrados de a e b", "expressao": "a^2-b^2", "var": "a"}, {"frase": "O dobro de um n\u00famero n diminu\u00eddo de sua ter\u00e7a parte", "expressao": "2n-n/3", "var": "n"}, {"frase": "O triplo de x mais o qu\u00e1druplo de y", "expressao": "3x+4y", "var": "x"}, {"frase": "Metade de um n\u00famero x mais a sua quarta parte", "expressao": "x/2+x/4", "var": "x"}, {"frase": "O qu\u00edntuplo de n menos quinze", "expressao": "5n-15", "var": "n"}, {"frase": "Vinte menos o triplo de um n\u00famero a", "expressao": "20-3a", "var": "a"}, {"frase": "A soma de dois n\u00fameros diferentes x e y", "expressao": "x+y", "var": "x"}, {"frase": "O produto de um n\u00famero x pelo seu dobro", "expressao": "x*2x", "var": "x"}, {"frase": "O triplo de um n\u00famero z somado com nove", "expressao": "3z+9", "var": "z"}, {"frase": "A quarta parte da soma de x com oito", "expressao": "(x+8)/4", "var": "x"}, {"frase": "O dobro da diferen\u00e7a entre dez e y", "expressao": "2*(10-y)", "var": "y"}, {"frase": "O qu\u00e1druplo de um n\u00famero n mais o seu consecutivo", "expressao": "4n+(n+1)", "var": "n"}, {"frase": "Um n\u00famero x multiplicado por cinco e somado a tr\u00eas", "expressao": "5x+3", "var": "x"}, {"frase": "A metade da diferen\u00e7a entre um n\u00famero a e seis", "expressao": "(a-6)/2", "var": "a"}, {"frase": "O triplo do quadrado de um n\u00famero n", "expressao": "3n^2", "var": "n"}, {"frase": "O dobro de um n\u00famero y subtra\u00eddo de vinte e cinco", "expressao": "25-2y", "var": "y"}, {"frase": "A soma de um n\u00famero x com a sua metade", "expressao": "x+x/2", "var": "x"}, {"frase": "O qu\u00edntuplo da soma de n com dois", "expressao": "5*(n+2)", "var": "n"}, {"frase": "A ter\u00e7a parte de um n\u00famero z mais o seu triplo", "expressao": "z/3+3z", "var": "z"}, {"frase": "Treze adicionado ao triplo de um n\u00famero a", "expressao": "13+3a", "var": "a"}, {"frase": "O dobro de um n\u00famero x mais o quadrado desse n\u00famero", "expressao": "2x+x^2", "var": "x"}, {"frase": "O qu\u00e1druplo de y menos o dobro de z", "expressao": "4y-2z", "var": "y"}, {"frase": "A diferen\u00e7a entre o triplo de n e o seu dobro", "expressao": "3n-2n", "var": "n"}];
+    const desafios = [
+        {"frase": "O dobro de um número x mais cinco", "expressao": "2x+5"},
+        {"frase": "O triplo de um número n menos dois", "expressao": "3n-2"},
+        {"frase": "A metade de um número y mais sete", "expressao": "y/2+7"},
+        {"frase": "O quádruplo de um número a adicionado a nove", "expressao": "4a+9"},
+        {"frase": "A terça parte de x subtraída de dez", "expressao": "10-x/3"},
+        {"frase": "O dobro da soma de x com três", "expressao": "2·(x+3)"},
+        {"frase": "O quadrado de um número n mais um", "expressao": "n^2+1"},
+        {"frase": "A diferença entre o triplo de x e quatro", "expressao": "3x-4"},
+        {"frase": "O quíntuplo de um número z mais o seu triplo", "expressao": "5z+3z"},
+        {"frase": "Um número y diminuído de oito", "expressao": "y-8"},
+        {"frase": "A soma de um número x com o seu dobro", "expressao": "x+2x"},
+        {"frase": "O triplo de um número a mais a sua metade", "expressao": "3a+a/2"},
+        {"frase": "Subtrair seis do quádruplo de n", "expressao": "4n-6"},
+        {"frase": "Adicionar cinco à quarta parte de x", "expressao": "x/4+5"},
+        {"frase": "O dobro de um número y mais o triplo de outro número z", "expressao": "2y+3z"},
+        {"frase": "A diferença entre dez e o dobro de n", "expressao": "10-2n"},
+        {"frase": "O triplo da diferença entre x e cinco", "expressao": "3·(x-5)"},
+        {"frase": "Um número n somado com o seu consecutivo", "expressao": "n+(n+1)"},
+        {"frase": "A soma de três números consecutivos iniciando em x", "expressao": "x+(x+1)+(x+2)"},
+        {"frase": "O produto de quatro pelo quadrado de y", "expressao": "4y^2"},
+        {"frase": "O cubo de um número a menos cinco", "expressao": "a^3-5"},
+        {"frase": "A quinta parte de um número z mais dois", "expressao": "z/5+2"},
+        {"frase": "O dobro de x elevado ao quadrado", "expressao": "(2x)^2"},
+        {"frase": "O triplo de y adicionado a doze", "expressao": "3y+12"},
+        {"frase": "Sete menos a terça parte de n", "expressao": "7-n/3"},
+        {"frase": "O quádruplo da soma de um número com um", "expressao": "4·(x+1)"},
+        {"frase": "A soma do quadrado de x com o quadrado de y", "expressao": "x^2+y^2"},
+        {"frase": "A diferença entre os quadrados de a e b", "expressao": "a^2-b^2"},
+        {"frase": "O dobro de um número n diminuído de sua terça parte", "expressao": "2n-n/3"},
+        {"frase": "O triplo de x mais o quádruplo de y", "expressao": "3x+4y"},
+        {"frase": "Metade de um número x mais a sua quarta parte", "expressao": "x/2+x/4"},
+        {"frase": "O quíntuplo de n menos quinze", "expressao": "5n-15"},
+        {"frase": "Vinte menos o triplo de um número a", "expressao": "20-3a"},
+        {"frase": "A soma de dois números diferentes x e y", "expressao": "x+y"},
+        {"frase": "O produto de um número x pelo seu dobro", "expressao": "x·2x"},
+        {"frase": "O triplo de um número z somado com nove", "expressao": "3z+9"},
+        {"frase": "A quarta parte da soma de x com oito", "expressao": "(x+8)/4"},
+        {"frase": "O dobro da diferença entre dez e y", "expressao": "2·(10-y)"},
+        {"frase": "O quádruplo de um número n mais o seu consecutivo", "expressao": "4n+(n+1)"},
+        {"frase": "Um número x multiplicado por cinco e somado a três", "expressao": "5x+3"},
+        {"frase": "A metade da diferença entre um número a e seis", "expressao": "(a-6)/2"},
+        {"frase": "O triplo do quadrado de um número n", "expressao": "3n^2"},
+        {"frase": "O dobro de um número y subtraído de vinte e cinco", "expressao": "25-2y"},
+        {"frase": "A soma de um número x com a sua metade", "expressao": "x+x/2"},
+        {"frase": "O quíntuplo da soma de n com dois", "expressao": "5·(n+2)"},
+        {"frase": "A terça parte de um número z mais o seu triplo", "expressao": "z/3+3z"},
+        {"frase": "Treze adicionado ao triplo de um número a", "expressao": "13+3a"},
+        {"frase": "O dobro de um número x mais o quadrado desse número", "expressao": "2x+x^2"},
+        {"frase": "O quádruplo de y menos o dobro de z", "expressao": "4y-2z"},
+        {"frase": "A diferença entre o triplo de n e o seu dobro", "expressao": "3n-2n"}
+    ];
 
     let currentMode = 'easy';
     let currentLevel = 0;
     let easySelectedCards = [];
     let hardInputString = "";
-    let gameState = 'waiting'; // waiting, checked
+    let gameState = 'waiting';
 
     function initGame() {
         loadLevel();
@@ -484,35 +517,30 @@
         const d = desafios[currentLevel];
         document.getElementById('phrase-display').innerText = d.frase;
         
-        // Update progress UI
         const pct = ((currentLevel + 1) / desafios.length) * 100;
         document.getElementById('progress-bar').style.width = pct + '%';
         document.getElementById('stats-display').innerText = `Nível ${currentLevel + 1}/${desafios.length}`;
 
-        // Reset inputs
         easySelectedCards = [];
         hardInputString = "";
         document.getElementById('response-box-hard').value = "";
         document.getElementById('response-box-easy').innerHTML = "";
         
-        // Reset Footer
         const footer = document.getElementById('feedback-footer');
         footer.className = "";
         document.getElementById('feedback-text').style.display = 'none';
         document.getElementById('action-btn').innerText = "VERIFICAR";
-        document.getElementById('action-btn').style.width = '100%';
 
         if(currentMode === 'easy') {
             buildEasyCards(d);
         }
     }
 
-    // Tokenizes a formula string into logical parts for the blocks
     function tokenizeExpression(expr) {
         let tokens = [];
         let i = 0;
         while(i < expr.length) {
-            if(['+', '-', '*', '/', '(', ')', '^'].includes(expr[i])) {
+            if(['+', '-', '·', '/', '(', ')', '^'].includes(expr[i])) {
                 tokens.push(expr[i]);
                 i++;
             } else if(/[0-9]/.test(expr[i])) {
@@ -534,12 +562,9 @@
 
     function buildEasyCards(challenge) {
         const correctTokens = tokenizeExpression(challenge.expressao);
-        
-        // Distractors generation based on current challenge context
-        const generalDistractors = ['+', '-', '2', '3', 'x', 'y', 'n', '5', '4', '(', ')'];
+        const generalDistractors = ['+', '-', '2', '3', 'x', 'y', 'n', '·', '(', ')'];
         let pool = [...correctTokens];
         
-        // Add random distractor cards ensuring no excessive duplication
         while(pool.length < Math.max(correctTokens.length + 4, 8)) {
             let rand = generalDistractors[Math.floor(Math.random() * generalDistractors.length)];
             if(pool.filter(x => x === rand).length < 2) {
@@ -547,9 +572,7 @@
             }
         }
 
-        // Shuffle pool
         pool.sort(() => Math.random() - 0.5);
-
         const container = document.getElementById('cards-container');
         container.innerHTML = "";
         
@@ -567,11 +590,7 @@
     function selectCard(cardEl) {
         if(gameState === 'checked') return;
         cardEl.classList.add('used');
-        
-        const token = cardEl.dataset.token;
-        const index = cardEl.dataset.index;
-        
-        easySelectedCards.push({token, index});
+        easySelectedCards.push({token: cardEl.dataset.token, index: cardEl.dataset.index});
         renderEasyResponse();
     }
 
@@ -590,11 +609,8 @@
     function removeSelectedCard(index) {
         if(gameState === 'checked') return;
         const removed = easySelectedCards.splice(index, 1)[0];
-        
-        // Reactivate card in pool
         const cardEl = document.querySelector(`.cards-grid .card[data-index="${removed.index}"]`);
         if(cardEl) cardEl.classList.remove('used');
-        
         renderEasyResponse();
     }
 
@@ -612,13 +628,12 @@
 
     function pressKey(val) {
         if(gameState === 'checked') return;
-        const inputEl = document.getElementById('response-box-hard');
         if(val === 'backspace') {
             hardInputString = hardInputString.slice(0, -1);
         } else {
             hardInputString += val;
         }
-        inputEl.value = hardInputString;
+        document.getElementById('response-box-hard').value = hardInputString;
     }
 
     function handleActionClick() {
@@ -636,15 +651,8 @@
 
     function verifyAnswer() {
         const d = desafios[currentLevel];
-        let userAnswer = "";
-        
-        if(currentMode === 'easy') {
-            userAnswer = easySelectedCards.map(x => x.token).join('');
-        } else {
-            userAnswer = hardInputString.trim();
-        }
+        let userAnswer = currentMode === 'easy' ? easySelectedCards.map(x => x.token).join('') : hardInputString.trim();
 
-        // Clean space variations for safety matching
         const cleanUser = userAnswer.replace(/\s+/g, '');
         const cleanCorrect = d.expressao.replace(/\s+/g, '');
 
@@ -655,19 +663,16 @@
         if(cleanUser === cleanCorrect) {
             footer.className = "correct";
             feedbackText.innerText = "Excelente! Resposta correta 🎉";
-            feedbackText.style.display = 'block';
-            actionBtn.innerText = "PRÓXIMO";
         } else {
             footer.className = "incorrect";
             feedbackText.innerText = `Ops! O correto seria: ${d.expressao}`;
-            feedbackText.style.display = 'block';
-            actionBtn.innerText = "PRÓXIMO";
         }
+        feedbackText.style.display = 'block';
+        actionBtn.innerText = "PRÓXIMO";
         gameState = 'checked';
     }
 
     window.onload = initGame;
 </script>
-
 </body>
 </html>
