@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algebrilíngua - Expressões Algébricas</title>
+    <style>
+        :root {
+            --primary: #58cc02;
+            --primary-dark: #46a302;
+            --secondary: #1cb0f6;
+            --secondary-dark: #1899d6;
+            --error: #ea2b2b;
+            --error-bg: #ffdfe0;
+            --success-bg: #d7ffb8;
+            --text-main: #3c3c3c;
+            --text-muted: #afafaf;
+            --bg-app: #ffffff;
+            --bg-card: #f7f7f7;
+            --border: #e5e5e5;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--bg-app);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        /* Top Header */
+        header {
+            padding: 20px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 20px;
+            color: var(--secondary);
+            font-weight: 700;
+        }
+
+        .mode-toggle {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 4px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .mode-btn {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--secondary);
+            color: white;
+            box-shadow: 0 4px 0 var(--secondary-dark);
+        }
+
+        /* Progress Bar */
+        .progress-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .progress-bar-outer {
+            flex-grow: 1;
+            height: 16px;
+            background: var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar-inner {
+            height: 100%;
+            width: 2%;
+            background: var(--primary);
+            border-radius: 8px;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-main);
+            min-width: 70px;
+            text-align: right;
+        }
+
+        /* Main Content */
+        main {
+            flex-grow: 1;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .instruction {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .phrase-box {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            font-size: 20px;
+            font-weight: 700;
+            text-align: center;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        /* Response Workspace */
+        .workspace-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .response-line {
+            width: 100%;
+            min-height: 60px;
+            border-bottom: 2px dashed var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            align-content: center;
+            gap: 8px;
+            padding: 5px 0;
+        }
+
+        .response-text-mode {
+            width: 100%;
+            min-height: 60px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-align: center;
+            background: #fafafa;
+            color: var(--text-main);
+        }
+
+        .clear-btn {
+            background: transparent;
+            border: none;
+            color: var(--error);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .clear-btn:hover {
+            background: var(--error-bg);
+        }
+
+        /* Cards & Keyboard */
+        .interactive-area {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .cards-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 4px 0 var(--border);
+            transition: all 0.1s ease;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        .card:active:not(.used) {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 var(--border);
+        }
+
+        .card.used {
+            background: var(--border);
+            color: transparent;
+            border-color: var(--border);
+            box-shadow: none;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Virtual Keyboard */
+        .virtual-keyboard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            width: 100%;
+        }
+
+        .key {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 0;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 3px 0 var(--border);
+            transition: all 0.1s;
+        }
+
+        .key:active {
+            transform: translateY(3px);
+            box-shadow: 0 0 0 var(--border);
+        }
+
+        .key.var-key {
+            background: #fff4e5;
+            border-color: #ffd8a8;
+            color: #d9480f;
+            box-shadow: 0 3px 0 #ffd8a8;
+        }
+
+        .key.op-key {
+            background: #e7f5ff;
+            border-color: #a5d8ff;
+            color: #1c7ed6;
+            box-shadow: 0 3px 0 #a5d8ff;
+        }
+
+        .key.backspace {
+            background: var(--error-bg);
+            border-color: #ffc9c9;
+            color: var(--error);
+            box-shadow: 0 3px 0 #ffc9c9;
+        }
+
+        /* Bottom Footer / Feedback Bar */
+        footer {
+            padding: 20px;
+            border-top: 2px solid var(--border);
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 90px;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+        }
+
+        .feedback-message {
+            display: none;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 5px 0 var(--primary-dark);
+            width: 100%;
+            transition: all 0.1s;
+            text-align: center;
+        }
+
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 var(--primary-dark);
+        }
+
+        /* Footer States */
+        footer.correct {
+            background-color: var(--success-bg);
+            border-top-color: #b8f28b;
+        }
+        footer.correct .feedback-message {
+            display: block;
+            color: #58a700;
+        }
+        footer.correct .action-btn {
+            background: #58a700;
+            box-shadow: 0 5px 0 #3e7500;
+            width: auto;
+        }
+
+        footer.incorrect {
+            background-color: var(--error-bg);
+            border-top-color: #ffc9c9;
+        }
+        footer.incorrect .feedback-message {
+            display: block;
+            color: #ea2b2b;
+        }
+        footer.incorrect .action-btn {
+            background: var(--error);
+            box-shadow: 0 5px 0 #b31d1d;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <header>
+        <div class="header-top">
+            <h1>Algebrilíngua 7º Ano</h1>
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="btn-easy" onclick="setMode('easy')">Fácil</button>
+                <button class="mode-btn" id="btn-hard" onclick="setMode('hard')">Difícil</button>
+            </div>
+        </div>
+        <div class="progress-wrapper">
+            <div class="progress-bar-outer">
+                <div class="progress-bar-inner" id="progress-bar"></div>
+            </div>
+            <div class="stats" id="stats-display">Nível 1/50</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="instruction" id="instruction-text">Traduza a frase abaixo usando os blocos:</div>
+        <div class="phrase-box" id="phrase-display">Carregando desafio...</div>
+
+        <div class="workspace-area">
+            <button class="clear-btn" onclick="clearCurrentAnswer()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Limpar
+            </button>
+            <div class="response-line" id="response-box-easy"></div>
+            <input type="text" class="response-text-mode" id="response-box-hard" readonly style="display: none;" placeholder="Sua resposta...">
+        </div>
+
+        <div class="interactive-area">
+            <!-- Easy Mode Area -->
+            <div class="cards-grid" id="cards-container"></div>
+
+            <!-- Hard Mode Area -->
+            <div class="virtual-keyboard" id="keyboard-container" style="display: none;">
+                <button class="key" onclick="pressKey('1')">1</button>
+                <button class="key" onclick="pressKey('2')">2</button>
+                <button class="key" onclick="pressKey('3')">3</button>
+                <button class="key op-key" onclick="pressKey('+')">+</button>
+                
+                <button class="key" onclick="pressKey('4')">4</button>
+                <button class="key" onclick="pressKey('5')">5</button>
+                <button class="key" onclick="pressKey('6')">6</button>
+                <button class="key op-key" onclick="pressKey('-')">-</button>
+                
+                <button class="key" onclick="pressKey('7')">7</button>
+                <button class="key" onclick="pressKey('8')">8</button>
+                <button class="key" onclick="pressKey('9')">9</button>
+                <button class="key op-key" onclick="pressKey('*')">*</button>
+                
+                <button class="key" onclick="pressKey('0')">0</button>
+                <button class="key var-key" onclick="pressKey('x')">x</button>
+                <button class="key var-key" onclick="pressKey('y')">y</button>
+                <button class="key op-key" onclick="pressKey('/')">/</button>
+                
+                <button class="key var-key" onclick="pressKey('n')">n</button>
+                <button class="key var-key" onclick="pressKey('a')">a</button>
+                <button class="key op-key" onclick="pressKey('(')">(</button>
+                <button class="key op-key" onclick="pressKey(')')">)</button>
+
+                <button class="key op-key" onclick="pressKey('^')">^</button>
+                <button class="key" style="grid-column: span 3;" class="key backspace" onclick="pressKey('backspace')">Apagar ⌫</button>
+            </div>
+        </div>
+    </main>
+
+    <footer id="feedback-footer">
+        <div class="feedback-message" id="feedback-text">Muito bem!</div>
+        <button class="action-btn" id="action-btn" onclick="handleActionClick()">VERIFICAR</button>
+    </footer>
+</div>
+
+<script>
+    const desafios = [{"frase": "O dobro de um n\u00famero x mais cinco", "expressao": "2x+5", "var": "x"}, {"frase": "O triplo de um n\u00famero n menos dois", "expressao": "3n-2", "var": "n"}, {"frase": "A metade de um n\u00famero y mais sete", "expressao": "y/2+7", "var": "y"}, {"frase": "O qu\u00e1druplo de um n\u00famero a adicionado a nove", "expressao": "4a+9", "var": "a"}, {"frase": "A ter\u00e7a parte de x subtra\u00edda de dez", "expressao": "10-x/3", "var": "x"}, {"frase": "O dobro da soma de x com tr\u00eas", "expressao": "2*(x+3)", "var": "x"}, {"frase": "O quadrado de um n\u00famero n mais um", "expressao": "n^2+1", "var": "n"}, {"frase": "A diferen\u00e7a entre o triplo de x e quatro", "expressao": "3x-4", "var": "x"}, {"frase": "O qu\u00edntuplo de um n\u00famero z mais o seu triplo", "expressao": "5z+3z", "var": "z"}, {"frase": "Um n\u00famero y diminu\u00eddo de oito", "expressao": "y-8", "var": "y"}, {"frase": "A soma de um n\u00famero x com o seu dobro", "expressao": "x+2x", "var": "x"}, {"frase": "O triplo de um n\u00famero a mais a sua metade", "expressao": "3a+a/2", "var": "a"}, {"frase": "Subtrair seis do qu\u00e1druplo de n", "expressao": "4n-6", "var": "n"}, {"frase": "Adicionar cinco \u00e0 quarta parte de x", "expressao": "x/4+5", "var": "x"}, {"frase": "O dobro de um n\u00famero y mais o triplo de outro n\u00famero z", "expressao": "2y+3z", "var": "y"}, {"frase": "A diferen\u00e7a entre dez e o dobro de n", "expressao": "10-2n", "var": "n"}, {"frase": "O triplo da diferen\u00e7a entre x e cinco", "expressao": "3*(x-5)", "var": "x"}, {"frase": "Um n\u00famero n somado com o seu consecutivo", "expressao": "n+(n+1)", "var": "n"}, {"frase": "A soma de tr\u00eas n\u00fameros consecutivos iniciando em x", "expressao": "x+(x+1)+(x+2)", "var": "x"}, {"frase": "O produto de quatro pelo quadrado de y", "expressao": "4y^2", "var": "y"}, {"frase": "O cubo de um n\u00famero a menos cinco", "expressao": "a^3-5", "var": "a"}, {"frase": "A quinta parte de um n\u00famero z mais dois", "expressao": "z/5+2", "var": "z"}, {"frase": "O dobro de x elevado ao quadrado", "expressao": "(2x)^2", "var": "x"}, {"frase": "O triplo de y adicionado a doze", "expressao": "3y+12", "var": "y"}, {"frase": "Sete menos a ter\u00e7a parte de n", "expressao": "7-n/3", "var": "n"}, {"frase": "O qu\u00e1druplo da soma de um n\u00famero com um", "expressao": "4*(x+1)", "var": "x"}, {"frase": "A soma do quadrado de x com o quadrado de y", "expressao": "x^2+y^2", "var": "x"}, {"frase": "A diferen\u00e7a entre os quadrados de a e b", "expressao": "a^2-b^2", "var": "a"}, {"frase": "O dobro de um n\u00famero n diminu\u00eddo de sua ter\u00e7a parte", "expressao": "2n-n/3", "var": "n"}, {"frase": "O triplo de x mais o qu\u00e1druplo de y", "expressao": "3x+4y", "var": "x"}, {"frase": "Metade de um n\u00famero x mais a sua quarta parte", "expressao": "x/2+x/4", "var": "x"}, {"frase": "O qu\u00edntuplo de n menos quinze", "expressao": "5n-15", "var": "n"}, {"frase": "Vinte menos o triplo de um n\u00famero a", "expressao": "20-3a", "var": "a"}, {"frase": "A soma de dois n\u00fameros diferentes x e y", "expressao": "x+y", "var": "x"}, {"frase": "O produto de um n\u00famero x pelo seu dobro", "expressao": "x*2x", "var": "x"}, {"frase": "O triplo de um n\u00famero z somado com nove", "expressao": "3z+9", "var": "z"}, {"frase": "A quarta parte da soma de x com oito", "expressao": "(x+8)/4", "var": "x"}, {"frase": "O dobro da diferen\u00e7a entre dez e y", "expressao": "2*(10-y)", "var": "y"}, {"frase": "O qu\u00e1druplo de um n\u00famero n mais o seu consecutivo", "expressao": "4n+(n+1)", "var": "n"}, {"frase": "Um n\u00famero x multiplicado por cinco e somado a tr\u00eas", "expressao": "5x+3", "var": "x"}, {"frase": "A metade da diferen\u00e7a entre um n\u00famero a e seis", "expressao": "(a-6)/2", "var": "a"}, {"frase": "O triplo do quadrado de um n\u00famero n", "expressao": "3n^2", "var": "n"}, {"frase": "O dobro de um n\u00famero y subtra\u00eddo de vinte e cinco", "expressao": "25-2y", "var": "y"}, {"frase": "A soma de um n\u00famero x com a sua metade", "expressao": "x+x/2", "var": "x"}, {"frase": "O qu\u00edntuplo da soma de n com dois", "expressao": "5*(n+2)", "var": "n"}, {"frase": "A ter\u00e7a parte de um n\u00famero z mais o seu triplo", "expressao": "z/3+3z", "var": "z"}, {"frase": "Treze adicionado ao triplo de um n\u00famero a", "expressao": "13+3a", "var": "a"}, {"frase": "O dobro de um n\u00famero x mais o quadrado desse n\u00famero", "expressao": "2x+x^2", "var": "x"}, {"frase": "O qu\u00e1druplo de y menos o dobro de z", "expressao": "4y-2z", "var": "y"}, {"frase": "A diferen\u00e7a entre o triplo de n e o seu dobro", "expressao": "3n-2n", "var": "n"}];
+
+    let currentMode = 'easy';
+    let currentLevel = 0;
+    let easySelectedCards = [];
+    let hardInputString = "";
+    let gameState = 'waiting'; // waiting, checked
+
+    function initGame() {
+        loadLevel();
+    }
+
+    function setMode(mode) {
+        if(gameState === 'checked') return;
+        currentMode = mode;
+        document.getElementById('btn-easy').classList.toggle('active', mode === 'easy');
+        document.getElementById('btn-hard').classList.toggle('active', mode === 'hard');
+        
+        if(mode === 'easy') {
+            document.getElementById('instruction-text').innerText = "Traduza a frase abaixo usando os blocos:";
+            document.getElementById('response-box-easy').style.display = 'flex';
+            document.getElementById('response-box-hard').style.display = 'none';
+            document.getElementById('cards-container').style.display = 'flex';
+            document.getElementById('keyboard-container').style.display = 'none';
+        } else {
+            document.getElementById('instruction-text').innerText = "Construa a expressão no teclado virtual:";
+            document.getElementById('response-box-easy').style.display = 'none';
+            document.getElementById('response-box-hard').style.display = 'block';
+            document.getElementById('cards-container').style.display = 'none';
+            document.getElementById('keyboard-container').style.display = 'grid';
+        }
+        clearCurrentAnswer();
+    }
+
+    function loadLevel() {
+        gameState = 'waiting';
+        const d = desafios[currentLevel];
+        document.getElementById('phrase-display').innerText = d.frase;
+        
+        // Update progress UI
+        const pct = ((currentLevel + 1) / desafios.length) * 100;
+        document.getElementById('progress-bar').style.width = pct + '%';
+        document.getElementById('stats-display').innerText = `Nível ${currentLevel + 1}/${desafios.length}`;
+
+        // Reset inputs
+        easySelectedCards = [];
+        hardInputString = "";
+        document.getElementById('response-box-hard').value = "";
+        document.getElementById('response-box-easy').innerHTML = "";
+        
+        // Reset Footer
+        const footer = document.getElementById('feedback-footer');
+        footer.className = "";
+        document.getElementById('feedback-text').style.display = 'none';
+        document.getElementById('action-btn').innerText = "VERIFICAR";
+        document.getElementById('action-btn').style.width = '100%';
+
+        if(currentMode === 'easy') {
+            buildEasyCards(d);
+        }
+    }
+
+    // Tokenizes a formula string into logical parts for the blocks
+    function tokenizeExpression(expr) {
+        let tokens = [];
+        let i = 0;
+        while(i < expr.length) {
+            if(['+', '-', '*', '/', '(', ')', '^'].includes(expr[i])) {
+                tokens.push(expr[i]);
+                i++;
+            } else if(/[0-9]/.test(expr[i])) {
+                let num = "";
+                while(i < expr.length && /[0-9]/.test(expr[i])) {
+                    num += expr[i];
+                    i++;
+                }
+                tokens.push(num);
+            } else if(/[a-z]/.test(expr[i])) {
+                tokens.push(expr[i]);
+                i++;
+            } else {
+                i++;
+            }
+        }
+        return tokens;
+    }
+
+    function buildEasyCards(challenge) {
+        const correctTokens = tokenizeExpression(challenge.expressao);
+        
+        // Distractors generation based on current challenge context
+        const generalDistractors = ['+', '-', '2', '3', 'x', 'y', 'n', '5', '4', '(', ')'];
+        let pool = [...correctTokens];
+        
+        // Add random distractor cards ensuring no excessive duplication
+        while(pool.length < Math.max(correctTokens.length + 4, 8)) {
+            let rand = generalDistractors[Math.floor(Math.random() * generalDistractors.length)];
+            if(pool.filter(x => x === rand).length < 2) {
+                pool.push(rand);
+            }
+        }
+
+        // Shuffle pool
+        pool.sort(() => Math.random() - 0.5);
+
+        const container = document.getElementById('cards-container');
+        container.innerHTML = "";
+        
+        pool.forEach((token, index) => {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'card';
+            cardEl.innerText = token;
+            cardEl.dataset.index = index;
+            cardEl.dataset.token = token;
+            cardEl.onclick = () => selectCard(cardEl);
+            container.appendChild(cardEl);
+        });
+    }
+
+    function selectCard(cardEl) {
+        if(gameState === 'checked') return;
+        cardEl.classList.add('used');
+        
+        const token = cardEl.dataset.token;
+        const index = cardEl.dataset.index;
+        
+        easySelectedCards.push({token, index});
+        renderEasyResponse();
+    }
+
+    function renderEasyResponse() {
+        const respBox = document.getElementById('response-box-easy');
+        respBox.innerHTML = "";
+        easySelectedCards.forEach((item, index) => {
+            const block = document.createElement('div');
+            block.className = 'card';
+            block.innerText = item.token;
+            block.onclick = () => removeSelectedCard(index);
+            respBox.appendChild(block);
+        });
+    }
+
+    function removeSelectedCard(index) {
+        if(gameState === 'checked') return;
+        const removed = easySelectedCards.splice(index, 1)[0];
+        
+        // Reactivate card in pool
+        const cardEl = document.querySelector(`.cards-grid .card[data-index="${removed.index}"]`);
+        if(cardEl) cardEl.classList.remove('used');
+        
+        renderEasyResponse();
+    }
+
+    function clearCurrentAnswer() {
+        if(gameState === 'checked') return;
+        if(currentMode === 'easy') {
+            easySelectedCards = [];
+            renderEasyResponse();
+            document.querySelectorAll('.cards-grid .card').forEach(c => c.classList.remove('used'));
+        } else {
+            hardInputString = "";
+            document.getElementById('response-box-hard').value = "";
+        }
+    }
+
+    function pressKey(val) {
+        if(gameState === 'checked') return;
+        const inputEl = document.getElementById('response-box-hard');
+        if(val === 'backspace') {
+            hardInputString = hardInputString.slice(0, -1);
+        } else {
+            hardInputString += val;
+        }
+        inputEl.value = hardInputString;
+    }
+
+    function handleActionClick() {
+        if(gameState === 'waiting') {
+            verifyAnswer();
+        } else {
+            currentLevel++;
+            if(currentLevel >= desafios.length) {
+                alert("Parabéns! Você completou os 50 desafios com sucesso!");
+                currentLevel = 0;
+            }
+            loadLevel();
+        }
+    }
+
+    function verifyAnswer() {
+        const d = desafios[currentLevel];
+        let userAnswer = "";
+        
+        if(currentMode === 'easy') {
+            userAnswer = easySelectedCards.map(x => x.token).join('');
+        } else {
+            userAnswer = hardInputString.trim();
+        }
+
+        // Clean space variations for safety matching
+        const cleanUser = userAnswer.replace(/\s+/g, '');
+        const cleanCorrect = d.expressao.replace(/\s+/g, '');
+
+        const footer = document.getElementById('feedback-footer');
+        const feedbackText = document.getElementById('feedback-text');
+        const actionBtn = document.getElementById('action-btn');
+
+        if(cleanUser === cleanCorrect) {
+            footer.className = "correct";
+            feedbackText.innerText = "Excelente! Resposta correta 🎉";
+            feedbackText.style.display = 'block';
+            actionBtn.innerText = "PRÓXIMO";
+        } else {
+            footer.className = "incorrect";
+            feedbackText.innerText = `Ops! O correto seria: ${d.expressao}`;
+            feedbackText.style.display = 'block';
+            actionBtn.innerText = "PRÓXIMO";
+        }
+        gameState = 'checked';
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
