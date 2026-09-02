@@ -586,117 +586,104 @@
         }
     }
 
-   async function importarAlunosParaBanco() {
-    if(!confirm(`Deseja sincronizar a lista de alunos para a coleção '${COLECAO_ALUNOS}'? Isso atualizará os alunos atuais, incluirá novos e removerá os alunos ausentes.`)) return;
+    async function importarAlunosParaBanco() {
+        if(!confirm(`Deseja sincronizar a lista de alunos para a coleção '${COLECAO_ALUNOS}'? Isso atualizará os alunos atuais, incluirá novos e removerá os alunos ausentes.`)) return;
 
-    const btn = document.getElementById("btn-importar-alunos");
-    btn.disabled = true;
-    btn.style.opacity = "0.5";
-    lancarPopUp("Sincronizando banco de dados...", "carregando");
+        const btn = document.getElementById("btn-importar-alunos");
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+        lancarPopUp("Sincronizando banco de dados...", "carregando");
 
-    try {
-        // 1. Agrupar a lista local (LISTA_ALUNOS_PILOTO) por turma e indexar por identificador único
-        const turmasAfetadas = [...new Set(LISTA_ALUNOS_PILOTO.map(a => a.turma))];
-        const contadoresTurma = {};
-        const mapaNovosAlunos = new Map();
+        try {
+            // 1. Agrupar a lista local (LISTA_ALUNOS_PILOTO) por turma e indexar por identificador único
+            const turmasAfetadas = [...new Set(LISTA_ALUNOS_PILOTO.map(a => a.turma))];
+            const contadoresTurma = {};
+            const mapaNovosAlunos = new Map();
 
-        LISTA_ALUNOS_PILOTO.forEach(aluno => {
-            if (contadoresTurma[aluno.turma] === undefined) {
-                contadoresTurma[aluno.turma] = 0;
-            }
-            
-            // Usamos o e-mail ou o nome em caixa alta como chave única
-            const chaveUnica = (aluno.email || aluno.nome).trim().toUpperCase();
-            
-            mapaNovosAlunos.set(chaveUnica, {
-                nome: aluno.nome,
-                turma: aluno.turma,
-                email_aluno: aluno.email || "",
-                num_chamada: aluno.chamacode || null,
-                email_pais: "",
-                ordem_matricula: contadoresTurma[aluno.turma]
-            });
-
-            contadoresTurma[aluno.turma]++;
-        });
-
-        // 2. Buscar alunos atualmente gravados no banco para as turmas envolvidas
-        for (const turma of turmasAfetadas) {
-            const snapshot = await db.collection(COLECAO_ALUNOS)
-                                     .where("turma", "==", turma)
-                                     .get();
-
-            const batch = db.batch();
-            let operacoesNoBatch = 0;
-
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const chaveExistente = (data.email_aluno || data.nome || "").trim().toUpperCase();
-
-                if (mapaNovosAlunos.has(chaveExistente)) {
-                    // Atualiza registro existente (Ordem/Nome/E-mail) e remove do mapa auxiliar
-                    const dadosAtualizados = mapaNovosAlunos.get(chaveExistente);
-                    batch.update(doc.ref, dadosAtualizados);
-                    mapaNovosAlunos.delete(chaveExistente);
-                } else {
-                    // Se o aluno não está mais na lista local, remove do banco de dados
-                    batch.delete(doc.ref);
+            LISTA_ALUNOS_PILOTO.forEach(aluno => {
+                if (contadoresTurma[aluno.turma] === undefined) {
+                    contadoresTurma[aluno.turma] = 0;
                 }
-                operacoesNoBatch++;
+                
+                // Usamos o e-mail ou o nome em caixa alta como chave única
+                const chaveUnica = (aluno.email || aluno.nome).trim().toUpperCase();
+                
+                mapaNovosAlunos.set(chaveUnica, {
+                    nome: aluno.nome,
+                    turma: aluno.turma,
+                    email_aluno: aluno.email || "",
+                    num_chamada: aluno.chamacode || null,
+                    email_pais: "",
+                    ordem_matricula: contadoresTurma[aluno.turma]
+                });
+
+                contadoresTurma[aluno.turma]++;
             });
 
-            if (operacoesNoBatch > 0) {
-                await batch.commit();
+            // 2. Buscar alunos atualmente gravados no banco para as turmas envolvidas
+            for (const turma of turmasAfetadas) {
+                const snapshot = await db.collection(COLECAO_ALUNOS)
+                                         .where("turma", "==", turma)
+                                         .get();
+
+                const batch = db.batch();
+                let operacoesNoBatch = 0;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const chaveExistente = (data.email_aluno || data.nome || "").trim().toUpperCase();
+
+                    if (mapaNovosAlunos.has(chaveExistente)) {
+                        // Atualiza registro existente (Ordem/Nome/E-mail) e remove do mapa auxiliar
+                        const dadosAtualizados = mapaNovosAlunos.get(chaveExistente);
+                        batch.update(doc.ref, dadosAtualizados);
+                        mapaNovosAlunos.delete(chaveExistente);
+                    } else {
+                        // Se o aluno não está mais na lista local, remove do banco de dados
+                        batch.delete(doc.ref);
+                    }
+                    operacoesNoBatch++;
+                });
+
+                if (operacoesNoBatch > 0) {
+                    await batch.commit();
+                }
             }
-        }
 
-        // 3. Cadastrar apenas os alunos realmente novos que restaram no Map
-        if (mapaNovosAlunos.size > 0) {
-            let batchAdicao = db.batch();
-            let countAdicao = 0;
+            // 3. Cadastrar apenas os alunos realmente novos que restaram no Map
+            if (mapaNovosAlunos.size > 0) {
+                let batchAdicao = db.batch();
+                let countAdicao = 0;
 
-            for (const [chave, dadosNovo] of mapaNovosAlunos.entries()) {
-                const novoDocRef = db.collection(COLECAO_ALUNOS).doc();
-                batchAdicao.set(novoDocRef, dadosNovo);
-                countAdicao++;
+                for (const [chave, dadosNovo] of mapaNovosAlunos.entries()) {
+                    const novoDocRef = db.collection(COLECAO_ALUNOS).doc();
+                    batchAdicao.set(novoDocRef, dadosNovo);
+                    countAdicao++;
 
-                // O Firestore suporta até 500 operações por batch
-                if (countAdicao === 450) {
+                    // O Firestore suporta até 500 operações por batch
+                    if (countAdicao === 450) {
+                        await batchAdicao.commit();
+                        batchAdicao = db.batch();
+                        countAdicao = 0;
+                    }
+                }
+
+                if (countAdicao > 0) {
                     await batchAdicao.commit();
-                    batchAdicao = db.batch();
-                    countAdicao = 0;
                 }
             }
 
-            if (countAdicao > 0) {
-                await batchAdicao.commit();
-            }
-        }
-
-        lancarPopUp("✅ Banco de dados sincronizado com sucesso!", "sucesso");
-        document.getElementById("status").innerText = `✅ Sucesso! Banco atualizado, removidos os ausentes e adicionados os novos.`;
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        
-        if (document.getElementById("select-turma").value) {
-            aoMudarTurma();
-        }
-    } catch(e) {
-        console.error(e);
-        lancarPopUp("Erro ao atualizar: " + e.message, "erro");
-        btn.disabled = false;
-        btn.style.opacity = "1";
-    }
-}
-            lancarPopUp(`✅ ${cadastrados} Alunos salvos na ordem!`, "sucesso");
-            document.getElementById("status").innerText = `✅ Sucesso! Alunos cadastrados em ordem estrita de chamada.`;
-            btn.style.display = "none";
+            lancarPopUp("✅ Banco de dados sincronizado com sucesso!", "sucesso");
+            document.getElementById("status").innerText = `✅ Sucesso! Banco atualizado, removidos os ausentes e adicionados os novos.`;
+            btn.disabled = false;
+            btn.style.opacity = "1";
             
-            if(document.getElementById("select-turma").value) {
+            if (document.getElementById("select-turma").value) {
                 aoMudarTurma();
             }
         } catch(e) {
-            lancarPopUp("Erro ao salvar: " + e.message, "erro");
+            console.error(e);
+            lancarPopUp("Erro ao atualizar: " + e.message, "erro");
             btn.disabled = false;
             btn.style.opacity = "1";
         }
