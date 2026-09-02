@@ -3,894 +3,847 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel OE - Registro Rápido</title>
-    <!-- Firebase Compat -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <title>Painel do Professor - Chamada e Ocorrências</title>
     
-    <!-- Gerador de Planilhas Excel (SheetJS) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Bibliotecas do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    
+    <!-- Biblioteca XLSX para exportar relatórios -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 12px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 18px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h1 { text-align: center; color: #2c3e50; margin-top: 0; margin-bottom: 12px; font-size: 22px; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
         
-        .secao-titulo { font-weight: bold; font-size: 13px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; border-bottom: 2px solid #ecf0f1; padding-bottom: 4px; margin-top: 15px; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .login-box { max-width: 350px; margin: 50px auto; padding: 25px; border: 1px solid #ddd; border-radius: 10px; background: #fff; text-align: center; }
+        .login-box input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; }
         
-        /* Selects e Inputs */
-        .select-campo, .input-conteudo { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 8px; font-size: 14px; box-sizing: border-box; background: white; margin-bottom: 8px; }
-        .flex-linha { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn-secundario { padding: 10px 14px; background-color: #34495e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; white-space: nowrap; font-size: 13px; }
+        .popup-notificacao { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: bold; z-index: 9999; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .popup-sucesso { background-color: #2ecc71; }
+        .popup-erro { background-color: #e74c3c; }
+        .popup-carregando { background-color: #3498db; }
+
+        .secao { margin-bottom: 20px; }
+        label { font-weight: bold; margin-right: 10px; }
+        select, button { padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; cursor: pointer; }
         
-        /* Botões de Exportação */
-        .btn-excel { background-color: #27ae60; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; padding: 10px 14px; font-size: 13px; white-space: nowrap; }
-        .btn-excel:hover { background-color: #219653; }
-        .btn-csv { background-color: #7f8c8d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; padding: 10px 14px; font-size: 13px; white-space: nowrap; }
-        .btn-csv:hover { background-color: #616161; }
-
-        /* Grid de Ocorrências */
-        .grid-ocorrencias { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 15px; }
-        .btn-acao { padding: 12px 6px; border: 2px solid #bdc3c7; border-radius: 8px; background: #fff; cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.2s; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 50px; }
+        .btn-acao { background-color: #ecf0f1; border: 1px solid #bdc3c7; transition: all 0.2s; margin-right: 5px; margin-bottom: 5px; }
+        .btn-acao.ativo { background-color: #3498db; color: #fff; border-color: #2980b9; font-weight: bold; }
         
-        .btn-pos.ativo { background-color: #2ecc71 !important; color: white !important; border-color: #27ae60 !important; transform: scale(1.02); }
-        .btn-duvida.ativo { background-color: #f39c12 !important; color: white !important; border-color: #d35400 !important; transform: scale(1.02); }
-        .btn-neg.ativo { background-color: #e74c3c !important; color: white !important; border-color: #c0392b !important; transform: scale(1.02); }
+        .grid-alunos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 15px; }
+        .btn-aluno { background-color: #ffffff; border: 2px solid #34495e; color: #2c3e50; padding: 12px; border-radius: 8px; text-align: left; font-weight: 600; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
+        .btn-aluno-teste { border-dash: 2px dashed #7f8c8d; background-color: #f8f9fa; }
         
-        .btn-pos:hover { border-color: #2ecc71; background: #f4fbf7; }
-        .btn-duvida:hover { border-color: #f39c12; background: #fef9e7; }
-        .btn-neg:hover { border-color: #e74c3c; background: #fdf5f5; }
-
-        /* Grid dos Alunos */
-        .grid-alunos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
-        .btn-aluno { padding: 10px; background-color: #ecf0f1; border: 1px solid #bdc3c7; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; text-align: left; transition: all 0.15s; text-transform: uppercase; word-break: break-word; line-height: 1.3; color: #333; position: relative; }
-        .btn-aluno:hover { background-color: #e2e7e9; transform: translateY(-2px); }
-        .btn-aluno-teste { background-color: #e2e8f0; border: 1px dashed #64748b; color: #475569; }
-
-        /* Lição concluída no prazo (Verde) */
-        .btn-aluno.licao-concluida { background-color: #2ecc71 !important; color: white !important; border-color: #27ae60 !important; font-weight: bold; }
-        .btn-aluno.licao-concluida:hover { background-color: #27ae60 !important; }
-
-        /* Lição entregue com ATRASO (Vermelho) */
-        .btn-aluno.licao-atrasada { background-color: #e74c3c !important; color: white !important; border-color: #c0392b !important; font-weight: bold; }
-        .btn-aluno.licao-atrasada:hover { background-color: #c0392b !important; }
-
-        .badge-atraso { background-color: #7f8c8d; color: white; padding: 2px 5px; border-radius: 4px; font-size: 9px; font-weight: bold; margin-left: 5px; display: inline-block; }
-
-        @keyframes piscarSucesso {
-            0% { background-color: #2ecc71; color: white; }
-            100% { background-color: #ecf0f1; color: #333; }
-        }
-        .piscar { animation: piscarSucesso 0.5s ease-out; }
-
-        .barra-status { margin-top: 15px; padding: 10px; background: #34495e; color: white; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold; }
-
-        /* Toast Popup */
-        .popup-notificacao { position: fixed; top: 15px; left: 50%; transform: translateX(-50%); background-color: #34495e; color: white; padding: 10px 20px; border-radius: 25px; font-weight: bold; font-size: 13px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 9999; display: none; }
-        .popup-sucesso { background-color: #2ecc71 !important; }
-        .popup-erro { background-color: #e74c3c !important; }
-        .popup-carregando { background-color: #f39c12 !important; }
+        .btn-aluno.licao-concluida { background-color: #d4edda; border-color: #28a745; color: #155724; }
+        .btn-aluno.licao-atrasada { background-color: #fff3cd; border-color: #ffc107; color: #856404; }
+        
+        .badge-atraso { background-color: #dc3545; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
+        .status-bar { background: #eef2f7; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-weight: 500; }
+        .piscar { animation: flash 0.5s; }
+        @keyframes flash { 0% { background-color: #f1c40f; } 100% { background-color: #ffffff; } }
     </style>
 </head>
 <body>
 
-<div id="popup-alerta" class="popup-notificacao"></div>
+    <div id="popup-alerta" class="popup-notificacao"></div>
 
-<div class="container">
-    <!-- LOGIN PROFESSOR -->
-    <div id="login-professor-box" style="max-width: 380px; margin: 30px auto; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center;">
-        <h2 style="margin-top:0; color:#34495e; font-size: 20px;">Acesso do Professor</h2>
-        <input type="email" id="email-prof" placeholder="Seu e-mail" class="input-conteudo" style="text-align: center;">
-        <input type="password" id="senha-prof" placeholder="Sua senha" class="input-conteudo" style="text-align: center;">
-        <button id="btn-entrar" onclick="fazerLoginProfessor()" style="width: 100%; padding: 12px; background-color: #34495e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Entrar no Painel</button>
-        <p id="erro-login-prof" style="color:#e74c3c; display:none; font-weight:bold; margin-top:10px; font-size:12px;"></p>
+    <div id="login-professor-box" class="login-box">
+        <h2>Área do Professor</h2>
+        <input type="email" id="email-prof" placeholder="E-mail do Professor">
+        <input type="password" id="senha-prof" placeholder="Senha">
+        <button onclick="fazerLoginProfessor()" style="background:#2ecc71; color:white; border:none; width:100%; margin-top:10px;">Entrar</button>
+        <p id="erro-login-prof" style="color:red; display:none; margin-top:10px; font-size:12px;"></p>
     </div>
 
-    <!-- PAINEL PRINCIPAL -->
-    <div id="painel-professor-conteudo" style="display: none;">
-        <h1>Acompanhamento de Aulas 📝</h1>
+    <div id="painel-professor-conteudo" class="container" style="display: none;">
+        <h2>Painel do Professor</h2>
         
-        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-            <button id="btn-importar-alunos" onclick="importarAlunosParaBanco()" style="background:#8e44ad; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; flex: 1; font-size:13px;">⚡ Enviar Alunos Mantendo a Ordem Exata</button>
-        </div>
+        <div class="status-bar" id="status">Selecione uma turma para iniciar.</div>
 
-        <div class="secao-titulo">1. Selecione a Turma</div>
-        <div class="flex-linha">
-            <select id="select-turma" class="select-campo" style="flex: 1; min-width: 180px;" onchange="aoMudarTurma()">
-                <option value="">-- Escolha a Turma --</option>
+        <div class="secao">
+            <label for="select-turma">Turma:</label>
+            <select id="select-turma" onchange="aoMudarTurma()">
+                <option value="">-- Selecione --</option>
                 <option value="1F">1F</option>
                 <option value="2H">2H</option>
                 <option value="2I">2I</option>
                 <option value="3D">3D</option>
             </select>
-            <button class="btn-excel" onclick="gerarRelatorioPlanilha('xlsx')">📊 Baixar Excel (.xlsx)</button>
-            <button class="btn-csv" onclick="gerarRelatorioPlanilha('csv')">📄 Baixar CSV</button>
-        </div>
 
-        <div class="secao-titulo">2. Atividade Atual</div>
-        <div class="flex-linha">
-            <select id="select-atividade" class="select-campo" style="flex: 1;" onchange="marcarAlunosComLicaoFeita()">
+            <label for="select-atividade" style="margin-left: 15px;">Atividade:</label>
+            <select id="select-atividade" onchange="marcarAlunosComLicaoFeita()">
                 <option value="Geral/Aula" data-prazo="">Geral / Aula Convencional</option>
             </select>
-            <button class="btn-secundario" onclick="cadastrarNovaAtividade()">+ Nova Atividade</button>
+
+            <button onclick="cadastrarNovaAtividade()" style="background:#8e44ad; color:white; border:none;">+ Nova Atividade</button>
         </div>
 
-        <div class="secao-titulo">3. Selecione a Ocorrência</div>
-        <div class="grid-ocorrencias">
-            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Lição de Sala feita')">
-                <span>📝 Lição Concluída</span>
-            </button>
-            <button class="btn-acao btn-duvida" onclick="selecionarOcorrencia(this, 'Tirou Dúvidas')">
-                <span>💡 Com Dúvida / Pediu Ajuda</span>
-            </button>
-            <button class="btn-acao btn-pos" onclick="selecionarOcorrencia(this, 'Plataforma feita')">
-                <span>💻 Plataforma feita</span>
-            </button>
-            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Não trouxe material')">
-                <span>✏️ Não trouxe material</span>
-            </button>
-            <button class="btn-acao btn-neg" onclick="selecionarOcorrencia(this, 'Desrespeito')">
-                <span>⚠️ Desrespeito</span>
-            </button>
+        <div class="secao">
+            <label>Registrar:</label><br><br>
+            <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Lição de Sala feita')">✔️ Lição Feita</button>
+            <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Tirou Dúvidas')">💡 Tirou Dúvida</button>
+            <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Plataforma feita')">💻 Plataforma</button>
+            <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Não trouxe material')">📚 Sem Material</button>
+            <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Desrespeito')">⚠️ Desrespeito</button>
         </div>
 
-        <div class="secao-titulo">4. Clique no Aluno para Registrar</div>
-        <div class="grid-alunos" id="grid-alunos-container">
-            <p style="color:#7f8c8d; font-size: 13px;">Selecione uma turma acima para buscar os alunos no banco de dados.</p>
+        <hr>
+
+        <div id="grid-alunos-container" class="grid-alunos">
+            <p style="color:#7f8c8d; font-size: 13px;">Selecione uma turma acima.</p>
         </div>
 
-        <div class="barra-status" id="status">Aguardando seleção de turma e ocorrência...</div>
+        <hr style="margin-top: 30px;">
+
+        <div class="secao" style="margin-top: 20px;">
+            <h3>Ferramentas do Sistema</h3>
+            <button id="btn-importar-alunos" onclick="importarAlunosParaBanco()" style="background:#e67e22; color:white; border:none;">🔄 Sincronizar / Limpar Alunos</button>
+            <button onclick="gerarRelatorioPlanilha('xlsx')" style="background:#27ae60; color:white; border:none; margin-left: 10px;">📊 Baixar Relatório (Excel)</button>
+        </div>
     </div>
-</div>
 
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyBtY3gnLGcX9biqtgy9Um7C2e1Y21-DSP8",
-        authDomain: "gamificacao-hashi.firebaseapp.com",
-        projectId: "gamificacao-hashi",
-        storageBucket: "gamificacao-hashi.firebasestorage.app",
-        messagingSenderId: "1019383886413",
-        appId: "1:1019383886413:web:a954f277e096ceef036204",
-        measurementId: "G-XJR45JGEGF"
-    };
-    
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-
-    let ocorrenciaAtiva = "";
-    const COLECAO_ALUNOS = "alunos_novos";
-    const COLECAO_OCORRENCIAS = "ocorrencias_aulas";
-
-    const LISTA_ALUNOS_PILOTO = [
-      // --- TURMA 1F ---
-      { chamacode: 1, nome: "ALANA MARQUES DA SILVA", email: "00001206348240sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 2, nome: "ALESSANDRO RICARDO DE DEUS BIANCHIM", email: "00001120468449sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 3, nome: "ALYSSON DE MELO BORGES", email: "00001115557762sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 4, nome: "ANA LUIZA DOS ANJOS SANTANA", email: "00001231233734sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 5, nome: "ANA SOPHIA SILVA DOMINGUES", email: "00001145693970sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 6, nome: "BEATRIZ WELLEN SANTOS VERNE", email: "00001153663806sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 7, nome: "BIANCA DA SILVA VILLA", email: "00001135779958sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 10, nome: "DAVI LUCCA ARANTES", email: "00001121914056sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 11, nome: "EDLLY ELOINI JESUS DE OLIVEIRA", email: "00001108186221sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 12, nome: "EVELLYN VICTORIA BUENO FRASSON", email: "00001133903460sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 13, nome: "FILIPE PEREIRA DA SILVA", email: "00001107384199sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 14, nome: "GABRIEL INACIO BUZANELI", email: "00001108281643sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 15, nome: "GIOVANNA COSTA SOUZA", email: "00001118150533sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 16, nome: "JENNIFFER REIS DE ARAUJO SILVA", email: "00001109282552sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 17, nome: "GUSTAVO LUCAS FRANCELINO DA SILVA", email: "00001126635054sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 18, nome: "ISABELA DA SILVA CORRÊA PINTO", email: "00001134539575sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 19, nome: "ISABELLA CAMILY FERREIRA MARTINS", email: "00001137326979sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 20, nome: "ISABELLY LIMA FURLAN", email: "00001116264389sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 21, nome: "JOÃO VITOR DA COSTA SILVA", email: "00001134374094sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 22, nome: "KATHLEEN RIHANNA RODRIGUES CARDOSO", email: "00001131145914sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 23, nome: "KAUÃ VELONISQUI DOS SANTOS", email: "00001126644389sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 25, nome: "LARISSA GABRIELLY SILVA DE SANTANA", email: "00001123927170sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 26, nome: "LEONARDO DA SILVA MARTINS", email: "0000113567491sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 27, nome: "LEVI BRAGA SANTOS REIS", email: "00001256460096sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 28, nome: "LUCAS DA SILVA RODRIGUES", email: "00001099079597sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 29, nome: "LUCAS HENRIQUE SILVA GOMES", email: "00001134503301sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 31, nome: "MARCOS VINNICYUS DE SOUSA RODRIGUES", email: "00001149609448sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 34, nome: "SOPHIA GITIRANA VIEIRA SANTOS", email: "00001219179796sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 37, nome: "VICTOR DA CRUZ FRANCISCO", email: "00001129333334sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 38, nome: "WISLA ISABELLY CARVALHO DA SILVA", email: "00001164212187sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 39, nome: "YAGO HENRIQUE VIANNA PAULINO", email: "00001120401069sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 40, nome: "YASMIN ARAUJO PEREIRA", email: "00001136854484sp@al.educacao.sp.gov.br", turma: "1F" },
-      { chamacode: 41, nome: "CLARA DE SOUZA ABADE", email: "00001139865389sp@al.educacao.sp.gov.br", turma: "1F" },
-
-      // --- TURMA 2H ---
-      { chamacode: 2, nome: "ANA BEATRIZ SANTOS CAVALCANTE", email: "00001124921540SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 3, nome: "ANA CLARA TOREZIN LOPES", email: "00001108845253SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 4, nome: "ANA LARA DE SOUZA SANTOS", email: "00001122466559SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 5, nome: "BRUNO ANTUNES AVANCI", email: "00001126324036SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 6, nome: "BRUNO OLIVEIRA GOMES", email: "00001107951057SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 7, nome: "CARLOS EDUARDO MACEDO AMOROZINO", email: "00001100311506SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 8, nome: "CÁSSIO ANDRADE SANTOS DE MORAES", email: "00001110573297SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 9, nome: "CRISTIANO PRADO FERREIRA DE BARROS", email: "00001099020050SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 11, nome: "DANIELE PEREIRA LIMA", email: "00001130345890SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 12, nome: "DANIELLA SILVA", email: "00001116750806SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 14, nome: "DOUGLAS FLORIANO ROCHA", email: "00001129792894SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 15, nome: "EDUARDA DE SOUZA CAPELATTO", email: "00001121250531SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 18, nome: "GABRIEL SOUZA GOMES", email: "00001112437241SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 21, nome: "GIOVANNA DA SILVA ROCHA", email: "00001121042235SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 22, nome: "HENRIQUE MARQUES PEREIRA", email: "00001124938850SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 23, nome: "ISABELLA PEREIRA DA CUNHA", email: "00001125744133SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 25, nome: "JAMILY DOS SANTOS NOGUEIRA", email: "00001084617778SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 26, nome: "JHENIFER AMSTALDEN DA SILVA", email: "0000110884389SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 27, nome: "JULIANO SIQUEIRA GOES SILVA", email: "00001120151053SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 28, nome: "JULIO CESAR RODRIGUES DE SOUZA", email: "00001118688235SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 29, nome: "LAYSLA SOUZA MATOS", email: "00001089995544SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 30, nome: "LEANDRO FABIO ANDRADE", email: "00001108348129SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 31, nome: "LETICIA FABIO ANDRADE", email: "00001108210405SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 32, nome: "MURILO ALVES DE OLIVEIRA", email: "0000112540761XSP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 33, nome: "NATALIA DA COSTA GOMES", email: "00001154151116SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 34, nome: "NICOLAS GABRIEL DA SILVA", email: "00001092036167SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 35, nome: "PABLO CAMARGO SCATENA", email: "00001120435365SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 36, nome: "PABLO LIMA DE OLIVEIRA", email: "00001128022485SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 38, nome: "REBECCA DINIZ ESTEVAM", email: "00001108255115SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 39, nome: "RICHARD PAMPLONA", email: "00001113389631SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 41, nome: "VICTOR PAULO GUAIUME", email: "00001129900769SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 42, nome: "VITORIA DO NASCIMENTO FERREIRA LIMA", email: "00001150220594SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 43, nome: "YASMIN CHEREM CALEGIA", email: "00001129670983SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 44, nome: "YASMIN VICTORIA SOFIATI", email: "00001129298243SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 46, nome: "PEDRO HENRIQUE DA SILVA CUBA", email: "00001129265766SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 47, nome: "MARIA GABRIELA DIONIZIO DE ANDRADE", email: "00001107324385SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 48, nome: "YASMIN SCARABEL GRAEFF", email: "00001105475293SP@al.educacao.sp.gov.br", turma: "2H" },
-      { chamacode: 49, nome: "YASMIN MAGALHÃES FRANCISCO", email: "0000113111596XSP@al.educacao.sp.gov.br", turma: "2H" },
-
-      // --- TURMA 2I ---
-      { chamacode: 1, nome: "ANA LAURA DOS SANTOS BATISTA", email: "00001125114629SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 4, nome: "CARLOS EDUARDO CARVALHO TARAMELLI LIMA", email: "00001113487306SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 5, nome: "CARLOS GABRIEL SANTOS OLIVEIRA", email: "00001116009687SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 6, nome: "CELINE DION DE OLIVEIRA PEREIRA DA SILVA", email: "00001262967156SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 7, nome: "EMANUEL PEDROSO SANTOS", email: "00001110173283SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 8, nome: "EVELLYN YSABELLY DIAS ALVES", email: "00001132018328SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 9, nome: "GABRIEL DA SILVA PORFIRIO", email: "00001101177755SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 10, nome: "GABRIEL DE CASTRO JORDÃO", email: "00001113932053SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 11, nome: "GABRIEL HENRIQUE SANCHES ALVES", email: "00001114647354SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 14, nome: "GABRIELLY SOUZA DO ESPIRITO SANTO", email: "00001107954289SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 15, nome: "GABRIELY EDUARDA SOUZA DA SILVA", email: "00001125185375SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 16, nome: "GEOVANI GABRIEL FARIAS DUTRA", email: "00001125124258SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 18, nome: "GUILHERME MARTINS DE OLIVEIRA", email: "00001128919709SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 20, nome: "GUSTAVO PACHECO DE ALMEIDA", email: "00001216745778SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 21, nome: "HELOÍSA PIRES", email: "00001125406197SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 24, nome: "HIGOR DA SILVA", email: "00001129830378SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 25, nome: "ISABELI TOLEDO CHEREM DA SILVA", email: "0000111411389XSP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 26, nome: "ISABELY SILVA PROENÇA", email: "00001133845149SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 28, nome: "JHONATAN HENRIQUE MARCIANO SANTOS", email: "00001109286235SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 29, nome: "KEILA DE JESUS SANTOS", email: "00001167016142SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 31, nome: "LETÍCIA FERREIRA DA SILVA", email: "00001124711739SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 32, nome: "LUAN SOUZA NEVES", email: "00001104636682SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 34, nome: "MAIRA GABRIELA GOMES", email: "00001120104725SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 36, nome: "MAYKE DIONIZIO MEDEIROS DOS SANTOS", email: "00001116014993SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 37, nome: "MAYUMI SUGAWARA DOS SANTOS", email: "00001115576409SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 38, nome: "MOISES DE CARVALHO CAMPOS", email: "0000113610995SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 40, nome: "PABLO SILVA AMARAL", email: "00001129986706SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 41, nome: "RUAN DA SILVA FIDELES", email: "00001107105651SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 42, nome: "SUSAN ELLEN DE AZEVEDO LIMA", email: "00001107326011SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 43, nome: "TIAGO PITES SILVA", email: "00001114799488SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 44, nome: "VITOR MANOEL SANTOS RAMOS", email: "00001220620026SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 45, nome: "VITORIA APARECIDA LEITE DOS SANTOS", email: "00001125120150SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 46, nome: "VITORIA REGINA FERREIRA DOS SANTOS", email: "00001125415873SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 47, nome: "INGRYD CARDOSO DA SILVA", email: "00001226119153SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 48, nome: "KAUAN LUZ DA SILVA", email: "0000110820868XSP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 49, nome: "LAIS CRISTINA ROBERTO DOS SANTOS", email: "00001108283147SP@al.educacao.sp.gov.br", turma: "2I" },
-      { chamacode: 57, nome: "JULIA STEFANY", email: "", turma: "2I" },
-
-      // --- TURMA 3E ---
-      { chamacode: 1, nome: "AMANDA EVELLYN DE SOUSA MATIAS BENTES", email: "0000109319554XSP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 2, nome: "ANA CRISTINA DA SILVA PIRES", email: "00001216670468SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 3, nome: "ANA LAURA VITAL ALVES", email: "0000111103987SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 4, nome: "ANDRIELLY SERRA SOUZA", email: "00001099301877SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 5, nome: "ANNA LUIZA MARTINS DA SILVA", email: "0000111348911XSP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 6, nome: "ASAFE BRAGA SANTOS REIS", email: "00001256487375SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 7, nome: "BEATRIZ ALVES SIMÕES DE OLIVEIRA", email: "00001094606364SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 8, nome: "EDUARDO DOS SANTOS ALVES", email: "00001098548012SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 11, nome: "ESTHER VICTORIA FERRETI MIGUEL", email: "00001100162203SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 12, nome: "EVELLYN HELOYSE PEREIRA RAULINO", email: "00001114111843SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 13, nome: "GABRIEL CORREA TAVARES", email: "00001123406285SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 15, nome: "GUILHERME CUSTODIO CAÇÃO", email: "0000109225660XSP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 16, nome: "JANÁIRA DO NASCIMENTO BARROSO", email: "00001159008954SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 17, nome: "JENIFFER PORTELA MUNHOZ", email: "00001124349042SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 18, nome: "JOÃO VICTOR MARQUES", email: "00001116626706SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 19, nome: "JÚLIA EDUARDA NUNES", email: "000011251911638SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 22, nome: "KAUA HENRIQUE FERREIRA DA SILVA", email: "00001099688747SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 23, nome: "LARISSI NAYARA VIEIRA GONCALVES", email: "00001108481759SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 24, nome: "LETICIA DE SOUZA DURAES", email: "00001092956165SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 25, nome: "LUCAS DE FREITAS SANTOS", email: "00001090000674SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 26, nome: "MARIA CLARA ALVES DA ROCHA SOUZA", email: "00001103534695SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 27, nome: "MARIA EDUARDA DUTRA DA SILVA", email: "00001113408042SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 28, nome: "MARIA EDUARDA PADILHA DE SOUZA", email: "00001108222705SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 30, nome: "RAFAELA CORREA SILVA", email: "00001113506325SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 31, nome: "RICARDO VIEIRA CARDOSO DA SILVA", email: "00001114778278SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 33, nome: "SAMUEL SMITH SILVA MENDES", email: "00001090069224SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 34, nome: "SARA BIANCHIM DA ROSA", email: "00001110578428SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 35, nome: "TAINA TRINDADE DE JESUS", email: "00001100838314SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 37, nome: "VANESSA SILVA DE OLIVEIRA", email: "00001113506684SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 38, nome: "YASMIN AMORIM ALVES", email: "00001099817080SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 40, nome: "YASMIN RACKELLY DE ALMEIDA MOTA", email: "0000111473687SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 41, nome: "JOSÉ ARIEL CARVALHO DE OLIVEIRA", email: "0000112902211SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 42, nome: "MIGUEL RODRIGUES MEDEIROS", email: "00001103217355SP@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 43, nome: "WANDERSON LUCAS FERREIRA ALVES", email: "00001266518393sp@al.educacao.sp.gov.br", turma: "3E" },
-      { chamacode: 44, nome: "KAYLANE REBECA CORREIA DE OLIVEIRA", email: "00001266604509sp@al.educacao.sp.gov.br", turma: "3E" }
-    ];
-
-    function lancarPopUp(texto, tipo) {
-        const popup = document.getElementById("popup-alerta");
-        if (!popup) return;
-        popup.innerText = texto;
-        popup.className = "popup-notificacao";
-        if(tipo === "sucesso") popup.classList.add("popup-sucesso");
-        if(tipo === "erro") popup.classList.add("popup-erro");
-        if(tipo === "carregando") popup.classList.add("popup-carregando");
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBtY3gnLGcX9biqtgy9Um7C2e1Y21-DSP8",
+            authDomain: "gamificacao-hashi.firebaseapp.com",
+            projectId: "gamificacao-hashi",
+            storageBucket: "gamificacao-hashi.firebasestorage.app",
+            messagingSenderId: "1019383886413",
+            appId: "1:1019383886413:web:a954f277e096ceef036204",
+            measurementId: "G-XJR45JGEGF"
+        };
         
-        popup.style.display = "block";
-        if(tipo !== "carregando") {
-            setTimeout(() => { popup.style.display = "none"; }, 1800);
-        }
-    }
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
 
-    function obterDataHojeLocal() {
-        const d = new Date();
-        const ano = d.getFullYear();
-        const mes = String(d.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`;
-    }
+        let ocorrenciaAtiva = "";
+        const COLECAO_ALUNOS = "alunos_novos";
+        const COLECAO_OCORRENCIAS = "ocorrencias_aulas";
 
-    async function fazerLoginProfessor() {
-        const email = document.getElementById("email-prof").value.trim();
-        const senha = document.getElementById("senha-prof").value.trim();
-        const erroBox = document.getElementById("erro-login-prof");
+        const LISTA_ALUNOS_PILOTO = [
+          // --- TURMA 1F ---
+          { chamacode: 1, nome: "ALANA MARQUES DA SILVA", email: "00001206348240sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 2, nome: "ALESSANDRO RICARDO DE DEUS BIANCHIM", email: "00001120468449sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 3, nome: "ALYSSON DE MELO BORGES", email: "00001115557762sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 4, nome: "ANA LUIZA DOS ANJOS SANTANA", email: "00001231233734sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 5, nome: "ANA SOPHIA SILVA DOMINGUES", email: "00001145693970sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 6, nome: "BEATRIZ WELLEN SANTOS VERNE", email: "00001153663806sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 7, nome: "BIANCA DA SILVA VILLA", email: "00001135779958sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 10, nome: "DAVI LUCCA ARANTES", email: "00001121914056sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 11, nome: "EDLLY ELOINI JESUS DE OLIVEIRA", email: "00001108186221sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 12, nome: "EVELLYN VICTORIA BUENO FRASSON", email: "00001133903460sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 13, nome: "FILIPE PEREIRA DA SILVA", email: "00001107384199sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 14, nome: "GABRIEL INACIO BUZANELI", email: "00001108281643sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 15, nome: "GIOVANNA COSTA SOUZA", email: "00001118150533sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 16, nome: "JENNIFFER REIS DE ARAUJO SILVA", email: "00001109282552sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 17, nome: "GUSTAVO LUCAS FRANCELINO DA SILVA", email: "00001126635054sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 18, nome: "ISABELA DA SILVA CORRÊA PINTO", email: "00001134539575sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 19, nome: "ISABELLA CAMILY FERREIRA MARTINS", email: "00001137326979sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 20, nome: "ISABELLY LIMA FURLAN", email: "00001116264389sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 21, nome: "JOÃO VITOR DA COSTA SILVA", email: "00001134374094sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 22, nome: "KATHLEEN RIHANNA RODRIGUES CARDOSO", email: "00001131145914sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 23, nome: "KAUÃ VELONISQUI DOS SANTOS", email: "00001126644389sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 25, nome: "LARISSA GABRIELLY SILVA DE SANTANA", email: "00001123927170sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 26, nome: "LEONARDO DA SILVA MARTINS", email: "0000113567491sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 27, nome: "LEVI BRAGA SANTOS REIS", email: "00001256460096sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 28, nome: "LUCAS DA SILVA RODRIGUES", email: "00001099079597sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 29, nome: "LUCAS HENRIQUE SILVA GOMES", email: "00001134503301sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 31, nome: "MARCOS VINNICYUS DE SOUSA RODRIGUES", email: "00001149609448sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 34, nome: "SOPHIA GITIRANA VIEIRA SANTOS", email: "00001219179796sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 37, nome: "VICTOR DA CRUZ FRANCISCO", email: "00001129333334sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 38, nome: "WISLA ISABELLY CARVALHO DA SILVA", email: "00001164212187sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 39, nome: "YAGO HENRIQUE VIANNA PAULINO", email: "00001120401069sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 40, nome: "YASMIN ARAUJO PEREIRA", email: "00001136854484sp@al.educacao.sp.gov.br", turma: "1F" },
+          { chamacode: 41, nome: "CLARA DE SOUZA ABADE", email: "00001139865389sp@al.educacao.sp.gov.br", turma: "1F" },
 
-        if(!email || !senha) {
-            erroBox.innerText = "Preencha o e-mail e a senha.";
-            erroBox.style.display = "block";
-            return;
-        }
+          // --- TURMA 2H ---
+          { chamacode: 2, nome: "ANA BEATRIZ SANTOS CAVALCANTE", email: "00001124921540SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 3, nome: "ANA CLARA TOREZIN LOPES", email: "00001108845253SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 4, nome: "ANA LARA DE SOUZA SANTOS", email: "00001122466559SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 5, nome: "BRUNO ANTUNES AVANCI", email: "00001126324036SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 6, nome: "BRUNO OLIVEIRA GOMES", email: "00001107951057SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 7, nome: "CARLOS EDUARDO MACEDO AMOROZINO", email: "00001100311506SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 8, nome: "CÁSSIO ANDRADE SANTOS DE MORAES", email: "00001110573297SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 9, nome: "CRISTIANO PRADO FERREIRA DE BARROS", email: "00001099020050SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 11, nome: "DANIELE PEREIRA LIMA", email: "00001130345890SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 12, nome: "DANIELLA SILVA", email: "00001116750806SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 14, nome: "DOUGLAS FLORIANO ROCHA", email: "00001129792894SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 15, nome: "EDUARDA DE SOUZA CAPELATTO", email: "00001121250531SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 18, nome: "GABRIEL SOUZA GOMES", email: "00001112437241SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 21, nome: "GIOVANNA DA SILVA ROCHA", email: "00001121042235SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 22, nome: "HENRIQUE MARQUES PEREIRA", email: "00001124938850SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 23, nome: "ISABELLA PEREIRA DA CUNHA", email: "00001125744133SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 25, nome: "JAMILY DOS SANTOS NOGUEIRA", email: "00001084617778SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 26, nome: "JHENIFER AMSTALDEN DA SILVA", email: "0000110884389SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 27, nome: "JULIANO SIQUEIRA GOES SILVA", email: "00001120151053SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 28, nome: "JULIO CESAR RODRIGUES DE SOUZA", email: "00001118688235SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 29, nome: "LAYSLA SOUZA MATOS", email: "00001089995544SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 30, nome: "LEANDRO FABIO ANDRADE", email: "00001108348129SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 31, nome: "LETICIA FABIO ANDRADE", email: "00001108210405SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 32, nome: "MURILO ALVES DE OLIVEIRA", email: "0000112540761XSP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 33, nome: "NATALIA DA COSTA GOMES", email: "00001154151116SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 34, nome: "NICOLAS GABRIEL DA SILVA", email: "00001092036167SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 35, nome: "PABLO CAMARGO SCATENA", email: "00001120435365SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 36, nome: "PABLO LIMA DE OLIVEIRA", email: "00001128022485SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 38, nome: "REBECCA DINIZ ESTEVAM", email: "00001108255115SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 39, nome: "RICHARD PAMPLONA", email: "00001113389631SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 41, nome: "VICTOR PAULO GUAIUME", email: "00001129900769SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 42, nome: "VITORIA DO NASCIMENTO FERREIRA LIMA", email: "00001150220594SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 43, nome: "YASMIN CHEREM CALEGIA", email: "00001129670983SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 44, nome: "YASMIN VICTORIA SOFIATI", email: "00001129298243SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 46, nome: "PEDRO HENRIQUE DA SILVA CUBA", email: "00001129265766SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 47, nome: "MARIA GABRIELA DIONIZIO DE ANDRADE", email: "00001107324385SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 48, nome: "YASMIN SCARABEL GRAEFF", email: "00001105475293SP@al.educacao.sp.gov.br", turma: "2H" },
+          { chamacode: 49, nome: "YASMIN MAGALHÃES FRANCISCO", email: "0000113111596XSP@al.educacao.sp.gov.br", turma: "2H" },
 
-        try {
-            await auth.signInWithEmailAndPassword(email, senha);
-            document.getElementById("login-professor-box").style.display = "none";
-            document.getElementById("painel-professor-conteudo").style.display = "block";
-            lancarPopUp("🔓 Login Efetuado!", "sucesso");
-        } catch (e) {
-            erroBox.innerText = "Falha no login: " + e.message;
-            erroBox.style.display = "block";
-        }
-    }
+          // --- TURMA 2I ---
+          { chamacode: 1, nome: "ANA LAURA DOS SANTOS BATISTA", email: "00001125114629SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 4, nome: "CARLOS EDUARDO CARVALHO TARAMELLI LIMA", email: "00001113487306SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 5, nome: "CARLOS GABRIEL SANTOS OLIVEIRA", email: "00001116009687SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 6, nome: "CELINE DION DE OLIVEIRA PEREIRA DA SILVA", email: "00001262967156SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 7, nome: "EMANUEL PEDROSO SANTOS", email: "00001110173283SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 8, nome: "EVELLYN YSABELLY DIAS ALVES", email: "00001132018328SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 9, nome: "GABRIEL DA SILVA PORFIRIO", email: "00001101177755SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 10, nome: "GABRIEL DE CASTRO JORDÃO", email: "00001113932053SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 11, nome: "GABRIEL HENRIQUE SANCHES ALVES", email: "00001114647354SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 14, nome: "GABRIELLY SOUZA DO ESPIRITO SANTO", email: "00001107954289SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 15, nome: "GABRIELY EDUARDA SOUZA DA SILVA", email: "00001125185375SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 16, nome: "GEOVANI GABRIEL FARIAS DUTRA", email: "00001125124258SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 18, nome: "GUILHERME MARTINS DE OLIVEIRA", email: "00001128919709SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 20, nome: "GUSTAVO PACHECO DE ALMEIDA", email: "00001216745778SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 21, nome: "HELOÍSA PIRES", email: "00001125406197SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 24, nome: "HIGOR DA SILVA", email: "00001129830378SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 25, nome: "ISABELI TOLEDO CHEREM DA SILVA", email: "0000111411389XSP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 26, nome: "ISABELY SILVA PROENÇA", email: "00001133845149SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 28, nome: "JHONATAN HENRIQUE MARCIANO SANTOS", email: "00001109286235SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 29, nome: "KEILA DE JESUS SANTOS", email: "00001167016142SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 31, nome: "LETÍCIA FERREIRA DA SILVA", email: "00001124711739SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 32, nome: "LUAN SOUZA NEVES", email: "00001104636682SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 34, nome: "MAIRA GABRIELA GOMES", email: "00001120104725SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 36, nome: "MAYKE DIONIZIO MEDEIROS DOS SANTOS", email: "00001116014993SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 37, nome: "MAYUMI SUGAWARA DOS SANTOS", email: "00001115576409SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 38, nome: "MOISES DE CARVALHO CAMPOS", email: "0000113610995SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 40, nome: "PABLO SILVA AMARAL", email: "00001129986706SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 41, nome: "RUAN DA SILVA FIDELES", email: "00001107105651SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 42, nome: "SUSAN ELLEN DE AZEVEDO LIMA", email: "00001107326011SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 43, nome: "TIAGO PITES SILVA", email: "00001114799488SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 44, nome: "VITOR MANOEL SANTOS RAMOS", email: "00001220620026SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 45, nome: "VITORIA APARECIDA LEITE DOS SANTOS", email: "00001125120150SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 46, nome: "VITORIA REGINA FERREIRA DOS SANTOS", email: "00001125415873SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 47, nome: "INGRYD CARDOSO DA SILVA", email: "00001226119153SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 48, nome: "KAUAN LUZ DA SILVA", email: "0000110820868XSP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 49, nome: "LAIS CRISTINA ROBERTO DOS SANTOS", email: "00001108283147SP@al.educacao.sp.gov.br", turma: "2I" },
+          { chamacode: 57, nome: "JULIA STEFANY", email: "", turma: "2I" },
 
-    function aoMudarTurma() {
-        carregarAlunosTurmaDoBanco();
-        carregarAtividadesDaTurma();
-    }
+          // --- TURMA 3D ---
+          { chamacode: 1, nome: "AMANDA EVELLYN DE SOUSA MATIAS BENTES", email: "0000109319554XSP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 2, nome: "ANA CRISTINA DA SILVA PIRES", email: "00001216670468SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 3, nome: "ANA LAURA VITAL ALVES", email: "0000111103987SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 4, nome: "ANDRIELLY SERRA SOUZA", email: "00001099301877SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 5, nome: "ANNA LUIZA MARTINS DA SILVA", email: "0000111348911XSP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 6, nome: "ASAFE BRAGA SANTOS REIS", email: "00001256487375SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 7, nome: "BEATRIZ ALVES SIMÕES DE OLIVEIRA", email: "00001094606364SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 8, nome: "EDUARDO DOS SANTOS ALVES", email: "00001098548012SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 11, nome: "ESTHER VICTORIA FERRETI MIGUEL", email: "00001100162203SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 12, nome: "EVELLYN HELOYSE PEREIRA RAULINO", email: "00001114111843SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 13, nome: "GABRIEL CORREA TAVARES", email: "00001123406285SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 15, nome: "GUILHERME CUSTODIO CAÇÃO", email: "0000109225660XSP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 16, nome: "JANÁIRA DO NASCIMENTO BARROSO", email: "00001159008954SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 17, nome: "JENIFFER PORTELA MUNHOZ", email: "00001124349042SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 18, nome: "JOÃO VICTOR MARQUES", email: "00001116626706SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 19, nome: "JÚLIA EDUARDA NUNES", email: "000011251911638SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 22, nome: "KAUA HENRIQUE FERREIRA DA SILVA", email: "00001099688747SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 23, nome: "LARISSI NAYARA VIEIRA GONCALVES", email: "00001108481759SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 24, nome: "LETICIA DE SOUZA DURAES", email: "00001092956165SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 25, nome: "LUCAS DE FREITAS SANTOS", email: "00001090000674SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 26, nome: "MARIA CLARA ALVES DA ROCHA SOUZA", email: "00001103534695SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 27, nome: "MARIA EDUARDA DUTRA DA SILVA", email: "00001113408042SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 28, nome: "MARIA EDUARDA PADILHA DE SOUZA", email: "00001108222705SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 30, nome: "RAFAELA CORREA SILVA", email: "00001113506325SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 31, nome: "RICARDO VIEIRA CARDOSO DA SILVA", email: "00001114778278SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 33, nome: "SAMUEL SMITH SILVA MENDES", email: "00001090069224SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 34, nome: "SARA BIANCHIM DA ROSA", email: "00001110578428SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 35, nome: "TAINA TRINDADE DE JESUS", email: "00001100838314SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 37, nome: "VANESSA SILVA DE OLIVEIRA", email: "00001113506684SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 38, nome: "YASMIN AMORIM ALVES", email: "00001099817080SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 40, nome: "YASMIN RACKELLY DE ALMEIDA MOTA", email: "0000111473687SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 41, nome: "JOSÉ ARIEL CARVALHO DE OLIVEIRA", email: "0000112902211SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 42, nome: "MIGUEL RODRIGUES MEDEIROS", email: "00001103217355SP@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 43, nome: "WANDERSON LUCAS FERREIRA ALVES", email: "00001266518393sp@al.educacao.sp.gov.br", turma: "3D" },
+          { chamacode: 44, nome: "KAYLANE REBECA CORREIA DE OLIVEIRA", email: "00001266604509sp@al.educacao.sp.gov.br", turma: "3D" }
+        ];
 
-    async function carregarAtividadesDaTurma(atividadeParaSelecionar = null) {
-        const turma = document.getElementById("select-turma").value;
-        const selectAtividade = document.getElementById("select-atividade");
-        
-        selectAtividade.innerHTML = '<option value="Geral/Aula" data-prazo="">Geral / Aula Convencional</option>';
-
-        if(!turma) return;
-
-        try {
-            const snapshot = await db.collection("atividades")
-                                    .where("turma", "==", turma)
-                                    .get();
-
-            let lista = [];
-            snapshot.forEach(doc => {
-                const item = doc.data();
-                lista.push({
-                    nome: item.nome,
-                    dataLimite: item.dataLimite || "",
-                    criadoEm: item.criadoEm ? item.criadoEm.toMillis() : 0
-                });
-            });
-
-            lista.sort((a, b) => b.criadoEm - a.criadoEm);
-
-            lista.forEach(item => {
-                const opt = document.createElement("option");
-                opt.value = item.nome;
-                opt.setAttribute("data-prazo", item.dataLimite);
-                opt.innerText = item.dataLimite ? `${item.nome} (Prazo: ${item.dataLimite})` : item.nome;
-                selectAtividade.appendChild(opt);
-            });
-
-            if (atividadeParaSelecionar) {
-                selectAtividade.value = atividadeParaSelecionar;
-            }
+        function lancarPopUp(texto, tipo) {
+            const popup = document.getElementById("popup-alerta");
+            if (!popup) return;
+            popup.innerText = texto;
+            popup.className = "popup-notificacao";
+            if(tipo === "sucesso") popup.classList.add("popup-sucesso");
+            if(tipo === "erro") popup.classList.add("popup-erro");
+            if(tipo === "carregando") popup.classList.add("popup-carregando");
             
-            marcarAlunosComLicaoFeita();
-        } catch(e) {
-            console.error("Erro ao carregar atividades:", e);
-        }
-    }
-
-    async function cadastrarNovaAtividade() {
-        const turma = document.getElementById("select-turma").value;
-
-        if (!turma) {
-            lancarPopUp("⚠️ Escolha uma turma antes!", "erro");
-            alert("Por favor, selecione primeiro a turma para a qual deseja cadastrar a atividade.");
-            return;
-        }
-
-        const nomeAtividade = prompt(`Digite o nome/título da atividade para a Turma ${turma}:`);
-        if (!nomeAtividade || nomeAtividade.trim() === "") return;
-
-        const dataLimite = prompt("Digite a Data Limite de entrega (Formato: AAAA-MM-DD):", obterDataHojeLocal());
-        if (!dataLimite) return;
-
-        const nomeTratado = nomeAtividade.trim();
-
-        try {
-            lancarPopUp("Salvando atividade...", "carregando");
-            
-            await db.collection("atividades").add({
-                nome: nomeTratado,
-                turma: turma,
-                dataLimite: dataLimite,
-                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            lancarPopUp("✅ Atividade Cadastrada!", "sucesso");
-            carregarAtividadesDaTurma(nomeTratado);
-        } catch(e) {
-            console.error(e);
-            lancarPopUp("Erro ao salvar atividade: " + e.message, "erro");
-        }
-    }
-
-    async function carregarAlunosTurmaDoBanco() {
-        const turma = document.getElementById("select-turma").value;
-        const container = document.getElementById("grid-alunos-container");
-        container.innerHTML = "";
-
-        if (!turma) {
-            container.innerHTML = '<p style="color:#7f8c8d; font-size: 13px;">Selecione uma turma acima.</p>';
-            return;
-        }
-
-        lancarPopUp("Buscando alunos...", "carregando");
-
-        try {
-            let snapshot;
-            try {
-                snapshot = await db.collection(COLECAO_ALUNOS)
-                                    .where("turma", "==", turma)
-                                    .orderBy("ordem_matricula", "asc")
-                                    .get();
-            } catch (errIndex) {
-                snapshot = await db.collection(COLECAO_ALUNOS)
-                                    .where("turma", "==", turma)
-                                    .get();
+            popup.style.display = "block";
+            if(tipo !== "carregando") {
+                setTimeout(() => { popup.style.display = "none"; }, 1800);
             }
+        }
 
-            if (snapshot.empty) {
-                container.innerHTML = `<p style="color:#e74c3c;">Nenhum aluno encontrado na coleção <b>${COLECAO_ALUNOS}</b> para a turma <b>${turma}</b>.</p>`;
-                lancarPopUp("Sem alunos encontrados", "erro");
+        function obterDataHojeLocal() {
+            const d = new Date();
+            const ano = d.getFullYear();
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
+        async function fazerLoginProfessor() {
+            const email = document.getElementById("email-prof").value.trim();
+            const senha = document.getElementById("senha-prof").value.trim();
+            const erroBox = document.getElementById("erro-login-prof");
+
+            if(!email || !senha) {
+                erroBox.innerText = "Preencha o e-mail e a senha.";
+                erroBox.style.display = "block";
                 return;
             }
 
-            let htmlBtns = `<button class="btn-aluno btn-aluno-teste" data-id="9999" data-nome="ALUNO TESTE" onclick="registrarOcorrencia(this, '9999', 'ALUNO TESTE')"><span class="nome-txt">⚙️ TESTE</span></button>`;
-
-            let alunosEncontrados = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                alunosEncontrados.push({
-                    id: doc.id,
-                    nome: data.nome || "Sem Nome",
-                    email: data.email_aluno || "",
-                    ordem: data.ordem_matricula !== undefined ? data.ordem_matricula : 999
-                });
-            });
-
-            alunosEncontrados.sort((a, b) => a.ordem - b.ordem);
-
-            alunosEncontrados.forEach(aluno => {
-                const identificador = aluno.email || aluno.nome;
-                htmlBtns += `<button class="btn-aluno" data-id="${identificador}" data-nome="${aluno.nome}" onclick="registrarOcorrencia(this, '${identificador}', '${aluno.nome}')"><span class="nome-txt">${aluno.nome}</span></button>`;
-            });
-
-            container.innerHTML = htmlBtns;
-            lancarPopUp(`Carregados ${alunosEncontrados.length} alunos!`, "sucesso");
-
-            marcarAlunosComLicaoFeita();
-
-        } catch (e) {
-            console.error(e);
-            container.innerHTML = `<p style="color:#e74c3c;">Erro ao buscar alunos: ${e.message}</p>`;
-            lancarPopUp("Erro no carregamento", "erro");
-        }
-    }
-
-    async function marcarAlunosComLicaoFeita() {
-        const turma = document.getElementById("select-turma").value;
-        const atividade = document.getElementById("select-atividade").value;
-
-        // Limpa visualização e classes de todos os alunos antes de checar
-        document.querySelectorAll(".btn-aluno").forEach(btn => {
-            btn.classList.remove("licao-concluida", "licao-atrasada");
-            const span = btn.querySelector('.nome-txt');
-            const nomeOriginal = btn.getAttribute('data-nome');
-            if (span && nomeOriginal) {
-                span.innerText = nomeOriginal;
+            try {
+                await auth.signInWithEmailAndPassword(email, senha);
+                document.getElementById("login-professor-box").style.display = "none";
+                document.getElementById("painel-professor-conteudo").style.display = "block";
+                lancarPopUp("🔓 Login Efetuado!", "sucesso");
+            } catch (e) {
+                erroBox.innerText = "Falha no login: " + e.message;
+                erroBox.style.display = "block";
             }
-        });
+        }
 
-        if (!turma || !atividade) return;
+        function aoMudarTurma() {
+            carregarAlunosTurmaDoBanco();
+            carregarAtividadesDaTurma();
+        }
 
-        try {
-            const snapshot = await db.collection(COLECAO_OCORRENCIAS)
-                                    .where("turma", "==", turma)
-                                    .where("atividade", "==", atividade)
-                                    .get();
+        async function carregarAtividadesDaTurma(atividadeParaSelecionar = null) {
+            const turma = document.getElementById("select-turma").value;
+            const selectAtividade = document.getElementById("select-atividade");
+            
+            selectAtividade.innerHTML = '<option value="Geral/Aula" data-prazo="">Geral / Aula Convencional</option>';
 
-            const statusAlunos = {};
+            if(!turma) return;
 
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const key = data.aluno_id || data.aluno_nome;
+            try {
+                const snapshot = await db.collection("atividades")
+                                        .where("turma", "==", turma)
+                                        .get();
+
+                let lista = [];
+                snapshot.forEach(doc => {
+                    const item = doc.data();
+                    lista.push({
+                        nome: item.nome,
+                        dataLimite: item.dataLimite || "",
+                        criadoEm: item.criadoEm ? item.criadoEm.toMillis() : 0
+                    });
+                });
+
+                lista.sort((a, b) => b.criadoEm - a.criadoEm);
+
+                lista.forEach(item => {
+                    const opt = document.createElement("option");
+                    opt.value = item.nome;
+                    opt.setAttribute("data-prazo", item.dataLimite);
+                    opt.innerText = item.dataLimite ? `${item.nome} (Prazo: ${item.dataLimite})` : item.nome;
+                    selectAtividade.appendChild(opt);
+                });
+
+                if (atividadeParaSelecionar) {
+                    selectAtividade.value = atividadeParaSelecionar;
+                }
                 
-                if (!statusAlunos[key]) {
-                    statusAlunos[key] = { fezLicao: false, tirouDuvida: false, emAtraso: false };
+                marcarAlunosComLicaoFeita();
+            } catch(e) {
+                console.error("Erro ao carregar atividades:", e);
+            }
+        }
+
+        async function cadastrarNovaAtividade() {
+            const turma = document.getElementById("select-turma").value;
+
+            if (!turma) {
+                lancarPopUp("⚠️ Escolha uma turma antes!", "erro");
+                alert("Por favor, selecione primeiro a turma para a qual deseja cadastrar a atividade.");
+                return;
+            }
+
+            const nomeAtividade = prompt(`Digite o nome/título da atividade para a Turma ${turma}:`);
+            if (!nomeAtividade || nomeAtividade.trim() === "") return;
+
+            const dataLimite = prompt("Digite a Data Limite de entrega (Formato: AAAA-MM-DD):", obterDataHojeLocal());
+            if (!dataLimite) return;
+
+            const nomeTratado = nomeAtividade.trim();
+
+            try {
+                lancarPopUp("Salvando atividade...", "carregando");
+                
+                await db.collection("atividades").add({
+                    nome: nomeTratado,
+                    turma: turma,
+                    dataLimite: dataLimite,
+                    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                lancarPopUp("✅ Atividade Cadastrada!", "sucesso");
+                carregarAtividadesDaTurma(nomeTratado);
+            } catch(e) {
+                console.error(e);
+                lancarPopUp("Erro ao salvar atividade: " + e.message, "erro");
+            }
+        }
+
+        async function carregarAlunosTurmaDoBanco() {
+            const turma = document.getElementById("select-turma").value;
+            const container = document.getElementById("grid-alunos-container");
+            container.innerHTML = "";
+
+            if (!turma) {
+                container.innerHTML = '<p style="color:#7f8c8d; font-size: 13px;">Selecione uma turma acima.</p>';
+                return;
+            }
+
+            lancarPopUp("Buscando alunos...", "carregando");
+
+            try {
+                const snapshot = await db.collection(COLECAO_ALUNOS)
+                                        .where("turma", "==", turma)
+                                        .get();
+
+                if (snapshot.empty) {
+                    container.innerHTML = `<p style="color:#e74c3c;">Nenhum aluno encontrado na coleção <b>${COLECAO_ALUNOS}</b> para a turma <b>${turma}</b>.</p>`;
+                    lancarPopUp("Sem alunos encontrados", "erro");
+                    return;
                 }
 
-                if (data.ocorrencia === "Lição de Sala feita") {
-                    statusAlunos[key].fezLicao = true;
-                    if (data.emAtraso) statusAlunos[key].emAtraso = true;
-                } else if (data.ocorrencia === "Tirou Dúvidas") {
-                    statusAlunos[key].tirouDuvida = true;
-                }
-            });
+                let htmlBtns = `<button class="btn-aluno btn-aluno-teste" data-id="9999" data-nome="ALUNO TESTE" onclick="registrarOcorrencia(this, '9999', 'ALUNO TESTE')"><span class="nome-txt">⚙️ TESTE</span></button>`;
+
+                let alunosEncontrados = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    alunosEncontrados.push({
+                        id: doc.id,
+                        nome: data.nome || "Sem Nome",
+                        email: data.email_aluno || "",
+                        ordem: data.ordem_matricula !== undefined ? data.ordem_matricula : 999
+                    });
+                });
+
+                alunosEncontrados.sort((a, b) => a.ordem - b.ordem);
+
+                alunosEncontrados.forEach(aluno => {
+                    const identificador = aluno.email || aluno.nome;
+                    htmlBtns += `<button class="btn-aluno" data-id="${identificador}" data-nome="${aluno.nome}" onclick="registrarOcorrencia(this, '${identificador}', '${aluno.nome}')"><span class="nome-txt">${aluno.nome}</span></button>`;
+                });
+
+                container.innerHTML = htmlBtns;
+                lancarPopUp(`Carregados ${alunosEncontrados.length} alunos!`, "sucesso");
+
+                marcarAlunosComLicaoFeita();
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = `<p style="color:#e74c3c;">Erro ao buscar alunos: ${e.message}</p>`;
+                lancarPopUp("Erro no carregamento", "erro");
+            }
+        }
+
+        async function marcarAlunosComLicaoFeita() {
+            const turma = document.getElementById("select-turma").value;
+            const atividade = document.getElementById("select-atividade").value;
 
             document.querySelectorAll(".btn-aluno").forEach(btn => {
-                const alunoId = btn.getAttribute("data-id");
-                const alunoNome = btn.getAttribute("data-nome");
-
-                const reg = statusAlunos[alunoId] || statusAlunos[alunoNome];
-
-                if (reg) {
-                    const span = btn.querySelector('.nome-txt');
-                    let textoHTML = "";
-
-                    // Exibe o ícone de lâmpada se o aluno tirou dúvidas
-                    if (reg.tirouDuvida) {
-                        textoHTML += "💡 ";
-                    }
-
-                    if (reg.fezLicao) {
-                        // Se foi entregue com atraso -> Fica Vermelho
-                        if (reg.emAtraso) {
-                            btn.classList.add("licao-atrasada");
-                            textoHTML += "✔️ " + alunoNome + `<span class="badge-atraso">ATRASO</span>`;
-                        } else {
-                            // Entregue no prazo -> Fica Verde
-                            btn.classList.add("licao-concluida");
-                            textoHTML += "✔️ " + alunoNome;
-                        }
-                    } else {
-                        textoHTML += alunoNome;
-                    }
-
-                    if (span) {
-                        span.innerHTML = textoHTML;
-                    }
+                btn.classList.remove("licao-concluida", "licao-atrasada");
+                const span = btn.querySelector('.nome-txt');
+                const nomeOriginal = btn.getAttribute('data-nome');
+                if (span && nomeOriginal) {
+                    span.innerText = nomeOriginal;
                 }
             });
-        } catch (e) {
-            console.error("Erro ao verificar lições concluídas:", e);
-        }
-    }
 
-    async function importarAlunosParaBanco() {
-        if(!confirm(`Deseja sincronizar a lista de alunos para a coleção '${COLECAO_ALUNOS}'? Isso atualizará os alunos atuais, incluirá novos e removerá os alunos ausentes.`)) return;
+            if (!turma || !atividade) return;
 
-        const btn = document.getElementById("btn-importar-alunos");
-        btn.disabled = true;
-        btn.style.opacity = "0.5";
-        lancarPopUp("Sincronizando banco de dados...", "carregando");
+            try {
+                const snapshot = await db.collection(COLECAO_OCORRENCIAS)
+                                        .where("turma", "==", turma)
+                                        .where("atividade", "==", atividade)
+                                        .get();
 
-        try {
-            // 1. Agrupar a lista local (LISTA_ALUNOS_PILOTO) por turma e indexar por identificador único
-            const turmasAfetadas = [...new Set(LISTA_ALUNOS_PILOTO.map(a => a.turma))];
-            const contadoresTurma = {};
-            const mapaNovosAlunos = new Map();
-
-            LISTA_ALUNOS_PILOTO.forEach(aluno => {
-                if (contadoresTurma[aluno.turma] === undefined) {
-                    contadoresTurma[aluno.turma] = 0;
-                }
-                
-                // Usamos o e-mail ou o nome em caixa alta como chave única
-                const chaveUnica = (aluno.email || aluno.nome).trim().toUpperCase();
-                
-                mapaNovosAlunos.set(chaveUnica, {
-                    nome: aluno.nome,
-                    turma: aluno.turma,
-                    email_aluno: aluno.email || "",
-                    num_chamada: aluno.chamacode || null,
-                    email_pais: "",
-                    ordem_matricula: contadoresTurma[aluno.turma]
-                });
-
-                contadoresTurma[aluno.turma]++;
-            });
-
-            // 2. Buscar alunos atualmente gravados no banco para as turmas envolvidas
-            for (const turma of turmasAfetadas) {
-                const snapshot = await db.collection(COLECAO_ALUNOS)
-                                         .where("turma", "==", turma)
-                                         .get();
-
-                const batch = db.batch();
-                let operacoesNoBatch = 0;
+                const statusAlunos = {};
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const chaveExistente = (data.email_aluno || data.nome || "").trim().toUpperCase();
-
-                    if (mapaNovosAlunos.has(chaveExistente)) {
-                        // Atualiza registro existente (Ordem/Nome/E-mail) e remove do mapa auxiliar
-                        const dadosAtualizados = mapaNovosAlunos.get(chaveExistente);
-                        batch.update(doc.ref, dadosAtualizados);
-                        mapaNovosAlunos.delete(chaveExistente);
-                    } else {
-                        // Se o aluno não está mais na lista local, remove do banco de dados
-                        batch.delete(doc.ref);
+                    const key = data.aluno_id || data.aluno_nome;
+                    
+                    if (!statusAlunos[key]) {
+                        statusAlunos[key] = { fezLicao: false, tirouDuvida: false, emAtraso: false };
                     }
-                    operacoesNoBatch++;
+
+                    if (data.ocorrencia === "Lição de Sala feita") {
+                        statusAlunos[key].fezLicao = true;
+                        if (data.emAtraso) statusAlunos[key].emAtraso = true;
+                    } else if (data.ocorrencia === "Tirou Dúvidas") {
+                        statusAlunos[key].tirouDuvida = true;
+                    }
                 });
 
-                if (operacoesNoBatch > 0) {
-                    await batch.commit();
-                }
+                document.querySelectorAll(".btn-aluno").forEach(btn => {
+                    const alunoId = btn.getAttribute("data-id");
+                    const alunoNome = btn.getAttribute("data-nome");
+
+                    const reg = statusAlunos[alunoId] || statusAlunos[alunoNome];
+
+                    if (reg) {
+                        const span = btn.querySelector('.nome-txt');
+                        let textoHTML = "";
+
+                        if (reg.tirouDuvida) {
+                            textoHTML += "💡 ";
+                        }
+
+                        if (reg.fezLicao) {
+                            if (reg.emAtraso) {
+                                btn.classList.add("licao-atrasada");
+                                textoHTML += "✔️ " + alunoNome + `<span class="badge-atraso">ATRASO</span>`;
+                            } else {
+                                btn.classList.add("licao-concluida");
+                                textoHTML += "✔️ " + alunoNome;
+                            }
+                        } else {
+                            textoHTML += alunoNome;
+                        }
+
+                        if (span) {
+                            span.innerHTML = textoHTML;
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Erro ao verificar lições concluídas:", e);
             }
+        }
 
-            // 3. Cadastrar apenas os alunos realmente novos que restaram no Map
-            if (mapaNovosAlunos.size > 0) {
-                let batchAdicao = db.batch();
-                let countAdicao = 0;
+        async function importarAlunosParaBanco() {
+            if(!confirm(`Deseja sincronizar a lista de alunos para a coleção '${COLECAO_ALUNOS}'?\n\n- Alunos novos serão adicionados;\n- Duplicados e ausentes serão REMOVIDOS;\n- Dados existentes serão atualizados.`)) return;
 
-                for (const [chave, dadosNovo] of mapaNovosAlunos.entries()) {
-                    const novoDocRef = db.collection(COLECAO_ALUNOS).doc();
-                    batchAdicao.set(novoDocRef, dadosNovo);
-                    countAdicao++;
+            const btn = document.getElementById("btn-importar-alunos");
+            if(btn) {
+                btn.disabled = true;
+                btn.style.opacity = "0.5";
+            }
+            lancarPopUp("Sincronizando e limpando banco...", "carregando");
 
-                    // O Firestore suporta até 500 operações por batch
-                    if (countAdicao === 450) {
+            try {
+                const turmasAfetadas = [...new Set(LISTA_ALUNOS_PILOTO.map(a => a.turma))];
+                const contadoresTurma = {};
+                const mapaNovosAlunos = new Map();
+
+                LISTA_ALUNOS_PILOTO.forEach(aluno => {
+                    if (contadoresTurma[aluno.turma] === undefined) {
+                        contadoresTurma[aluno.turma] = 0;
+                    }
+                    
+                    const chaveTexto = (aluno.email || aluno.nome).trim().toUpperCase();
+                    const idDocumentoFixo = chaveTexto.replace(/[^a-zA-Z0-9]/g, "_");
+                    
+                    mapaNovosAlunos.set(idDocumentoFixo, {
+                        nome: aluno.nome,
+                        turma: aluno.turma,
+                        email_aluno: aluno.email || "",
+                        num_chamada: aluno.chamacode || null,
+                        email_pais: "",
+                        ordem_matricula: contadoresTurma[aluno.turma]
+                    });
+
+                    contadoresTurma[aluno.turma]++;
+                });
+
+                for (const turma of turmasAfetadas) {
+                    const snapSnapshot = await db.collection(COLECAO_ALUNOS)
+                                             .where("turma", "==", turma)
+                                             .get();
+
+                    let batch = db.batch();
+                    let operacoes = 0;
+                    const idsJaProcessadosNaTurma = new Set();
+
+                    for (const doc of snapSnapshot.docs) {
+                        const docId = doc.id;
+                        const data = doc.data();
+                        
+                        const chaveTextoBanco = (data.email_aluno || data.nome || "").trim().toUpperCase();
+                        const idFixoEsperado = chaveTextoBanco.replace(/[^a-zA-Z0-9]/g, "_");
+
+                        if (idsJaProcessadosNaTurma.has(idFixoEsperado) || !mapaNovosAlunos.has(idFixoEsperado) || docId !== idFixoEsperado) {
+                            batch.delete(doc.ref);
+                            operacoes++;
+                        } else {
+                            batch.set(doc.ref, mapaNovosAlunos.get(idFixoEsperado), { merge: true });
+                            idsJaProcessadosNaTurma.add(idFixoEsperado);
+                            mapaNovosAlunos.delete(idFixoEsperado);
+                            operacoes++;
+                        }
+
+                        if (operacoes >= 400) {
+                            await batch.commit();
+                            batch = db.batch();
+                            operacoes = 0;
+                        }
+                    }
+
+                    if (operacoes > 0) {
+                        await batch.commit();
+                    }
+                }
+
+                if (mapaNovosAlunos.size > 0) {
+                    let batchAdicao = db.batch();
+                    let countAdicao = 0;
+
+                    for (const [idFixo, dadosNovo] of mapaNovosAlunos.entries()) {
+                        const novoDocRef = db.collection(COLECAO_ALUNOS).doc(idFixo);
+                        batchAdicao.set(novoDocRef, dadosNovo, { merge: true });
+                        countAdicao++;
+
+                        if (countAdicao >= 400) {
+                            await batchAdicao.commit();
+                            batchAdicao = db.batch();
+                            countAdicao = 0;
+                        }
+                    }
+
+                    if (countAdicao > 0) {
                         await batchAdicao.commit();
-                        batchAdicao = db.batch();
-                        countAdicao = 0;
                     }
                 }
 
-                if (countAdicao > 0) {
-                    await batchAdicao.commit();
+                lancarPopUp("✅ Banco Limpo e Sincronizado!", "sucesso");
+                document.getElementById("status").innerText = `✅ Sucesso! Duplicados e ausentes removidos. Alunos sincronizados.`;
+                
+                if(btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }
+                
+                if (document.getElementById("select-turma").value) {
+                    aoMudarTurma();
+                }
+
+            } catch(e) {
+                console.error(e);
+                lancarPopUp("Erro na sincronização: " + e.message, "erro");
+                if(btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
                 }
             }
+        }
 
-            lancarPopUp("✅ Banco de dados sincronizado com sucesso!", "sucesso");
-            document.getElementById("status").innerText = `✅ Sucesso! Banco atualizado, removidos os ausentes e adicionados os novos.`;
-            btn.disabled = false;
-            btn.style.opacity = "1";
+        function selecionarOcorrencia(botao, ocorrencia) {
+            document.querySelectorAll('.btn-acao').forEach(b => b.classList.remove('ativo'));
+            botao.classList.add('ativo');
+            ocorrenciaAtiva = ocorrencia;
             
-            if (document.getElementById("select-turma").value) {
-                aoMudarTurma();
+            document.getElementById("status").innerText = `PRONTO: Clique no aluno para registrar [ ${ocorrencia} ]`;
+            lancarPopUp(`Ação selecionada: ${ocorrencia}`, "sucesso");
+        }
+
+        async function registrarOcorrencia(botaoAluno, alunoId, nomeAluno) {
+            const turma = document.getElementById("select-turma").value;
+            const selectAtiv = document.getElementById("select-atividade");
+            const atividade = selectAtiv.value;
+            const dataLimite = selectAtiv.options[selectAtiv.selectedIndex].getAttribute("data-prazo");
+
+            if (!turma) {
+                lancarPopUp("⚠️ Escolha a Turma!", "erro");
+                return;
             }
-        } catch(e) {
-            console.error(e);
-            lancarPopUp("Erro ao atualizar: " + e.message, "erro");
-            btn.disabled = false;
-            btn.style.opacity = "1";
-        }
-    }
-
-    function selecionarOcorrencia(botao, ocorrencia) {
-        document.querySelectorAll('.btn-acao').forEach(b => b.classList.remove('ativo'));
-        botao.classList.add('ativo');
-        ocorrenciaAtiva = ocorrencia;
-        
-        document.getElementById("status").innerText = `PRONTO: Clique no aluno para registrar [ ${ocorrencia} ]`;
-        lancarPopUp(`Ação selecionada: ${ocorrencia}`, "sucesso");
-    }
-
-    async function registrarOcorrencia(botaoAluno, alunoId, nomeAluno) {
-        const turma = document.getElementById("select-turma").value;
-        const selectAtiv = document.getElementById("select-atividade");
-        const atividade = selectAtiv.value;
-        const dataLimite = selectAtiv.options[selectAtiv.selectedIndex].getAttribute("data-prazo");
-
-        if (!turma) {
-            lancarPopUp("⚠️ Escolha a Turma!", "erro");
-            return;
-        }
-        if (!ocorrenciaAtiva) {
-            lancarPopUp("⚠️ Escolha a Ocorrência primeiro!", "erro");
-            return;
-        }
-
-        lancarPopUp(`Gravando para ${nomeAluno}...`, "carregando");
-
-        const hoje = obterDataHojeLocal();
-        const emAtraso = (ocorrenciaAtiva === "Lição de Sala feita" && dataLimite && hoje > dataLimite);
-
-        try {
-            await db.collection(COLECAO_OCORRENCIAS).add({
-                aluno_id: alunoId,
-                aluno_nome: nomeAluno,
-                turma: turma,
-                ocorrencia: ocorrenciaAtiva,
-                atividade: atividade,
-                emAtraso: emAtraso,
-                data: firebase.firestore.FieldValue.serverTimestamp(),
-                data_string: hoje
-            });
-
-            // Recarrega o estado atualizado dos botões
-            await marcarAlunosComLicaoFeita();
-
-            if (ocorrenciaAtiva !== "Lição de Sala feita" && ocorrenciaAtiva !== "Tirou Dúvidas") {
-                botaoAluno.classList.add('piscar');
-                setTimeout(() => botaoAluno.classList.remove('piscar'), 500);
-            }
-
-            lancarPopUp(`✅ ${nomeAluno}: ${ocorrenciaAtiva}!`, "sucesso");
-            document.getElementById("status").innerText = `✅ Gravado: [${ocorrenciaAtiva}] -> ${nomeAluno}`;
-
-        } catch (error) {
-            document.getElementById("status").innerText = `❌ Erro: ${error.message}`;
-            lancarPopUp("❌ Falha ao gravar!", "erro");
-        }
-    }
-
-    // =======================================================
-    // GERAR RELATÓRIO EXCEL/CSV (COM CAMPO TIROU DÚVIDAS)
-    // =======================================================
-    async function gerarRelatorioPlanilha(formato) {
-        const turma = document.getElementById("select-turma").value;
-        if (!turma) {
-            lancarPopUp("⚠️ Escolha uma turma primeiro!", "erro");
-            return;
-        }
-
-        lancarPopUp("Gerando Planilha...", "carregando");
-
-        try {
-            // 1. Buscar Alunos
-            let snapAlunos = await db.collection(COLECAO_ALUNOS)
-                                     .where("turma", "==", turma)
-                                     .get();
-
-            let listaAlunos = [];
-            snapAlunos.forEach(doc => {
-                const data = doc.data();
-                listaAlunos.push({
-                    id: doc.id,
-                    nome: data.nome || "Sem Nome",
-                    email: data.email_aluno || "",
-                    ordem: data.ordem_matricula !== undefined ? data.ordem_matricula : 999
-                });
-            });
-            listaAlunos.sort((a, b) => a.ordem - b.ordem);
-
-            if (listaAlunos.length === 0) {
-                lancarPopUp("Nenhum aluno encontrado!", "erro");
+            if (!ocorrenciaAtiva) {
+                lancarPopUp("⚠️ Escolha a Ocorrência primeiro!", "erro");
                 return;
             }
 
-            // 2. Buscar Atividades da Turma
-            let snapAtiv = await db.collection("atividades")
-                                   .where("turma", "==", turma)
-                                   .get();
+            lancarPopUp(`Gravando para ${nomeAluno}...`, "carregando");
 
-            let listaAtividades = [];
-            let mapaPrazos = {};
-
-            snapAtiv.forEach(doc => {
-                const d = doc.data();
-                listaAtividades.push({ nome: d.nome, criadoEm: d.criadoEm ? d.criadoEm.toMillis() : 0, dataLimite: d.dataLimite || "" });
-                mapaPrazos[d.nome] = d.dataLimite || "";
-            });
-            listaAtividades.sort((a, b) => a.criadoEm - b.criadoEm);
-
-            // 3. Buscar Ocorrências
-            let snapHist = await db.collection(COLECAO_OCORRENCIAS)
-                                   .where("turma", "==", turma)
-                                   .get();
-
-            let dadosAlunos = {};
-            listaAlunos.forEach(a => {
-                const key = a.email || a.nome;
-                dadosAlunos[key] = {
-                    nome: a.nome,
-                    licoes: {},
-                    tirouDuvidas: 0,
-                    plataforma: 0,
-                    semMaterial: 0,
-                    desrespeito: 0
-                };
-            });
-
-            snapHist.forEach(doc => {
-                const h = doc.data();
-                const key = h.aluno_id || h.aluno_nome;
-
-                if (dadosAlunos[key]) {
-                    const ativNome = h.atividade || "Geral/Aula";
-                    if (h.ocorrencia === "Lição de Sala feita") {
-                        dadosAlunos[key].licoes[ativNome] = h.emAtraso ? "Entregue com Atraso" : "Entregue no Prazo";
-                    } else if (h.ocorrencia === "Tirou Dúvidas") {
-                        dadosAlunos[key].tirouDuvidas += 1;
-                    } else if (h.ocorrencia === "Plataforma feita") {
-                        dadosAlunos[key].plataforma += 1;
-                    } else if (h.ocorrencia === "Não trouxe material") {
-                        dadosAlunos[key].semMaterial += 1;
-                    } else if (h.ocorrencia === "Desrespeito") {
-                        dadosAlunos[key].desrespeito += 1;
-                    }
-                }
-            });
-
-            // 4. Montar Matriz para Exportação
             const hoje = obterDataHojeLocal();
-            let dadosPlanilha = [];
+            const emAtraso = (ocorrenciaAtiva === "Lição de Sala feita" && dataLimite && hoje > dataLimite);
 
-            listaAlunos.forEach(aluno => {
-                const key = aluno.email || aluno.nome;
-                const info = dadosAlunos[key];
-
-                let linha = { "Aluno": info.nome };
-
-                listaAtividades.forEach(ativ => {
-                    let st = info.licoes[ativ.nome];
-                    if (!st) {
-                        if (ativ.dataLimite && hoje > ativ.dataLimite) {
-                            st = "Atrasado (Não entregue)";
-                        } else {
-                            st = "Pendente";
-                        }
-                    }
-                    linha[ativ.nome] = st;
+            try {
+                await db.collection(COLECAO_OCORRENCIAS).add({
+                    aluno_id: alunoId,
+                    aluno_nome: nomeAluno,
+                    turma: turma,
+                    ocorrencia: ocorrenciaAtiva,
+                    atividade: atividade,
+                    emAtraso: emAtraso,
+                    data: firebase.firestore.FieldValue.serverTimestamp(),
+                    data_string: hoje
                 });
 
-                linha["Tirou Dúvidas"] = info.tirouDuvidas;
-                linha["Plataformas Feitas"] = info.plataforma;
-                linha["Não Trouxe Material"] = info.semMaterial;
-                linha["Desrespeito"] = info.desrespeito;
+                await marcarAlunosComLicaoFeita();
 
-                dadosPlanilha.push(linha);
-            });
+                if (ocorrenciaAtiva !== "Lição de Sala feita" && ocorrenciaAtiva !== "Tirou Dúvidas") {
+                    botaoAluno.classList.add('piscar');
+                    setTimeout(() => botaoAluno.classList.remove('piscar'), 500);
+                }
 
-            // 5. Download com SheetJS
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
+                lancarPopUp(`✅ ${nomeAluno}: ${ocorrenciaAtiva}!`, "sucesso");
+                document.getElementById("status").innerText = `✅ Gravado: [${ocorrenciaAtiva}] -> ${nomeAluno}`;
 
-            const colWidths = [{ wch: 35 }];
-            listaAtividades.forEach(() => colWidths.push({ wch: 22 }));
-            colWidths.push({ wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 15 });
-            ws['!cols'] = colWidths;
+            } catch (error) {
+                document.getElementById("status").innerText = `❌ Erro: ${error.message}`;
+                lancarPopUp("❌ Falha ao gravar!", "erro");
+            }
+        }
 
-            XLSX.utils.book_append_sheet(wb, ws, `Turma ${turma}`);
-
-            const nomeArquivo = `Relatorio_Desempenho_${turma}_${hoje}`;
-
-            if (formato === 'csv') {
-                XLSX.writeFile(wb, `${nomeArquivo}.csv`, { bookType: 'csv' });
-            } else {
-                XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
+        async function gerarRelatorioPlanilha(formato) {
+            const turma = document.getElementById("select-turma").value;
+            if (!turma) {
+                lancarPopUp("⚠️ Escolha uma turma primeiro!", "erro");
+                return;
             }
 
-            lancarPopUp("✅ Planilha Baixada!", "sucesso");
+            lancarPopUp("Gerando Planilha...", "carregando");
 
-        } catch (e) {
-            console.error("Erro ao gerar planilha:", e);
-            lancarPopUp("Erro ao exportar: " + e.message, "erro");
+            try {
+                let snapAlunos = await db.collection(COLECAO_ALUNOS)
+                                         .where("turma", "==", turma)
+                                         .get();
+
+                let listaAlunos = [];
+                snapAlunos.forEach(doc => {
+                    const data = doc.data();
+                    listaAlunos.push({
+                        id: doc.id,
+                        nome: data.nome || "Sem Nome",
+                        email: data.email_aluno || "",
+                        ordem: data.ordem_matricula !== undefined ? data.ordem_matricula : 999
+                    });
+                });
+                listaAlunos.sort((a, b) => a.ordem - b.ordem);
+
+                if (listaAlunos.length === 0) {
+                    lancarPopUp("Nenhum aluno encontrado!", "erro");
+                    return;
+                }
+
+                let snapAtiv = await db.collection("atividades")
+                                       .where("turma", "==", turma)
+                                       .get();
+
+                let listaAtividades = [];
+                let mapaPrazos = {};
+
+                snapAtiv.forEach(doc => {
+                    const d = doc.data();
+                    listaAtividades.push({ nome: d.nome, criadoEm: d.criadoEm ? d.criadoEm.toMillis() : 0, dataLimite: d.dataLimite || "" });
+                    mapaPrazos[d.nome] = d.dataLimite || "";
+                });
+                listaAtividades.sort((a, b) => a.criadoEm - b.criadoEm);
+
+                let snapHist = await db.collection(COLECAO_OCORRENCIAS)
+                                       .where("turma", "==", turma)
+                                       .get();
+
+                let dadosAlunos = {};
+                listaAlunos.forEach(a => {
+                    const key = a.email || a.nome;
+                    dadosAlunos[key] = {
+                        nome: a.nome,
+                        licoes: {},
+                        tirouDuvidas: 0,
+                        plataforma: 0,
+                        semMaterial: 0,
+                        desrespeito: 0
+                    };
+                });
+
+                snapHist.forEach(doc => {
+                    const h = doc.data();
+                    const key = h.aluno_id || h.aluno_nome;
+
+                    if (dadosAlunos[key]) {
+                        const ativNome = h.atividade || "Geral/Aula";
+                        if (h.ocorrencia === "Lição de Sala feita") {
+                            dadosAlunos[key].licoes[ativNome] = h.emAtraso ? "Entregue com Atraso" : "Entregue no Prazo";
+                        } else if (h.ocorrencia === "Tirou Dúvidas") {
+                            dadosAlunos[key].tirouDuvidas += 1;
+                        } else if (h.ocorrencia === "Plataforma feita") {
+                            dadosAlunos[key].plataforma += 1;
+                        } else if (h.ocorrencia === "Não trouxe material") {
+                            dadosAlunos[key].semMaterial += 1;
+                        } else if (h.ocorrencia === "Desrespeito") {
+                            dadosAlunos[key].desrespeito += 1;
+                        }
+                    }
+                });
+
+                const hoje = obterDataHojeLocal();
+                let dadosPlanilha = [];
+
+                listaAlunos.forEach(aluno => {
+                    const key = aluno.email || aluno.nome;
+                    const info = dadosAlunos[key];
+
+                    let linha = { "Aluno": info.nome };
+
+                    listaAtividades.forEach(ativ => {
+                        let st = info.licoes[ativ.nome];
+                        if (!st) {
+                            if (ativ.dataLimite && hoje > ativ.dataLimite) {
+                                st = "Atrasado (Não entregue)";
+                            } else {
+                                st = "Pendente";
+                            }
+                        }
+                        linha[ativ.nome] = st;
+                    });
+
+                    linha["Tirou Dúvidas"] = info.tirouDuvidas;
+                    linha["Plataformas Feitas"] = info.plataforma;
+                    linha["Não Trouxe Material"] = info.semMaterial;
+                    linha["Desrespeito"] = info.desrespeito;
+
+                    dadosPlanilha.push(linha);
+                });
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
+
+                const colWidths = [{ wch: 35 }];
+                listaAtividades.forEach(() => colWidths.push({ wch: 22 }));
+                colWidths.push({ wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 15 });
+                ws['!cols'] = colWidths;
+
+                XLSX.utils.book_append_sheet(wb, ws, `Turma ${turma}`);
+
+                const nomeArquivo = `Relatorio_Desempenho_${turma}_${hoje}`;
+
+                if (formato === 'csv') {
+                    XLSX.writeFile(wb, `${nomeArquivo}.csv`, { bookType: 'csv' });
+                } else {
+                    XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
+                }
+
+                lancarPopUp("✅ Planilha Baixada!", "sucesso");
+
+            } catch (e) {
+                console.error("Erro ao gerar planilha:", e);
+                lancarPopUp("Erro ao exportar: " + e.message, "erro");
+            }
         }
-    }
-</script>
+    </script>
 </body>
 </html>
