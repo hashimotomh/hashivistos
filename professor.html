@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel do Professor V2 - Modo Rápido</title>
+    <title>Painel do Professor V2 - Modo Rápido (7º Ano)</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -14,9 +14,13 @@
         
         .secao-titulo { font-weight: bold; font-size: 14px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; margin-top: 15px; }
         
-        /* Caixa de Texto do Conteúdo */
+        /* Caixa de Texto do Conteúdo e Controles de Atividades Recentes */
         .input-conteudo { width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: border 0.2s; }
         .input-conteudo:focus { border-color: #34495e; outline: none; }
+        
+        .box-atividades-recentes { display: flex; gap: 10px; margin-top: 8px; align-items: center; }
+        .select-recentes { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; font-size: 13px; background-color: #f8fafc; }
+        .btn-carregar-recentes { padding: 10px 15px; background-color: #34495e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap; }
 
         /* Layout das Ocorrências */
         .grid-ocorrencias { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 25px; }
@@ -35,6 +39,9 @@
         .btn-aluno:hover { background-color: #e2e7e9; transform: translateY(-2px); }
         .btn-aluno:active { transform: translateY(0); }
         
+        /* Estilo para Aluno com Atividade Concluída */
+        .btn-aluno.concluido { background-color: #2ecc71 !important; color: white !important; border-color: #27ae60 !important; }
+        
         /* Estilo especial para o botão de TESTE */
         .btn-aluno-teste { background-color: #e2e8f0; border: 1px dashed #64748b; color: #475569; }
         .btn-aluno-teste:hover { background-color: #cbd5e1; }
@@ -49,9 +56,14 @@
         /* Rodapé de Status */
         .barra-status { margin-top: 20px; padding: 12px; background: #34495e; color: white; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; min-height: 20px; }
 
-        /* ========================================================
-           SISTEMA DE POP-UP NOTIFICAÇÃO (TOAST) - FIXO E SEGURO
-           ======================================================== */
+        /* Tabela do Ranking */
+        .tabela-ranking { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        .tabela-ranking th, .tabela-ranking td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .tabela-ranking th { background-color: #f8fafc; color: #475569; font-weight: bold; }
+        .tabela-ranking tr:nth-child(even) { background-color: #f8fafc; }
+        .posicao-top3 { font-weight: bold; color: #d97706; }
+
+        /* Pop-up Toast */
         .popup-notificacao {
             position: fixed;
             top: 20px;
@@ -89,7 +101,7 @@
 
 <div class="container">
     <div id="login-professor-box" style="max-width: 400px; margin: 40px auto; background: #fff; padding: 25px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center;">
-        <h2 style="margin-top:0; color:#34495e;">Login do Professor</h2>
+        <h2 style="margin-top:0; color:#34495e;">Login do Professor (7º Ano)</h2>
         <input type="email" id="email-prof" placeholder="Seu e-mail do Firebase" class="input-conteudo" style="margin-bottom: 10px; text-align: center;">
         <input type="password" id="senha-prof" placeholder="Sua senha do Firebase" class="input-conteudo" style="margin-bottom: 15px; text-align: center;">
         <button id="btn-entrar" onclick="fazerLoginProfessor()" style="width: 100%; padding: 12px; background-color: #34495e; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Entrar no Painel</button>
@@ -97,11 +109,17 @@
     </div>
 
     <div id="painel-professor-conteudo" style="display: none;">
-        <h1>Painel de Controle Gamificado ⚡</h1>
+        <h1>Painel de Controle Gamificado ⚡ (7º Ano)</h1>
         
-        <div class="secao-titulo">Conteúdo da Aula (Opcional)</div>
+        <div class="secao-titulo">Conteúdo da Aula / Atividade</div>
         <div>
-            <input type="text" id="conteudo-aula" placeholder="Ex: Equações de 2º Grau / Leitura do capítulo 3" class="input-conteudo">
+            <input type="text" id="conteudo-aula" placeholder="Ex: Equações de 1º Grau / Leitura Cap. 2" class="input-conteudo" oninput="verificarAlunosConcluidos()">
+            <div class="box-atividades-recentes">
+                <button class="btn-carregar-recentes" onclick="carregarAtividadesRecentes()">📋 Carregar Recentes</button>
+                <select id="select-atividades-recentes" class="select-recentes" onchange="selecionarAtividadeRecente(this)">
+                    <option value="">-- Selecione uma atividade anterior --</option>
+                </select>
+            </div>
         </div>
         
         <div class="secao-titulo">1. Selecione a Ocorrência Ativa</div>
@@ -156,41 +174,56 @@
 
         <div class="secao-titulo">2. Clique no Aluno para Computar</div>
         <div class="grid-alunos">
-            <button class="btn-aluno btn-aluno-teste" onclick="computarPonto(this, '9999', 'TESTE DO SISTEMA')"><span>⚙️ ALUNO TESTE</span></button>
+            <button class="btn-aluno btn-aluno-teste" data-id="9999" onclick="computarPonto(this, '9999', 'TESTE DO SISTEMA')"><span>⚙️ ALUNO TESTE</span></button>
             
-            <button class="btn-aluno" onclick="computarPonto(this, '1001', 'ALYCE FERNANDA CASONI DO NASCIMENTO')"><span>1. Alyce F.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1002', 'ANA CLARA FERREIRA DE OLIVEIRA')"><span>2. Ana Clara</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1003', 'ANA JÚLIA DANGL TABET')"><span>3. Ana Júlia</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1004', 'ANGEL RUBEN HIGUERA MARCANO')"><span>4. Angel R.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1005', 'ARTHUR ESCHEMBACH SILVA')"><span>5. Arthur E.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1006', 'BRUNO MIGUEL FRANCO DE MORAES')"><span>6. Bruno M.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1007', 'CLARA REIS FERNANDES DO VALE')"><span>7. Clara R.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1008', 'DAFNE LOMES PACIENCIA')"><span>8. Dafne L.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1009', 'DAVI LUCCA LEME DE SOUZA')"><span>9. Davi Lucca</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1010', 'DAVI SANTOS DAMO')"><span>10. Davi S.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1011', 'EVELLYN DE OLIVEIRA BERTANE')"><span>11. Evellyn O.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1012', 'GIOVANA CUNHA MOTA')"><span>12. Giovana C.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1013', 'GUILHERME DONATO MATTOS DE PAULA')"><span>13. Guilherme D.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1014', 'HEITOR DANIEL DE CAMARGO SILVA')"><span>14. Heitor D.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1015', 'ISAAC MATHEUS SANTOS DA SILVA')"><span>15. Isaac M.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1016', 'ISABELLY COLONIA DE SOUZA')"><span>16. Isabelly C.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1017', 'IZABELLE COSTA SANTOS')"><span>17. Izabelle C.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1018', 'JASMINY KARLA SANTANA DE ALMEIDA')"><span>18. Jasminy K.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1019', 'JULIO VINICIUS PALMEIRA GHIRARDELLI')"><span>19. Julio V.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1020', 'KAUÃ AUGUSTO DE SOUZA')"><span>20. Kauã A.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1021', 'LORENZO SANTOS SAVI')"><span>21. Lorenzo S.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1022', 'MARIA CLARA LEMOS ALMEIDA')"><span>22. Maria Clara</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1023', 'MIGUEL HENRIQUE BOONEN EUGENIO')"><span>23. Miguel H.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1024', 'MURILO HENRIQUE DA SILVA CITRAN')"><span>24. Murilo H.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1025', 'NICOLAS RAFAEL DIONISIO TRIQUEIROS')"><span>25. Nicolas R.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1026', 'OLIVIA FERREIRA PRESTES')"><span>26. Olivia F.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1027', 'OTÁVIO BARBOSA SILVA')"><span>27. Otávio B.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1028', 'PIETRA LABELLA MOREIRA SANTOS')"><span>28. Pietra L.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1029', 'RYAN LUCAS NASCIMENTO SANTOS')"><span>29. Ryan L.</span></button>
-            <button class="btn-aluno" onclick="computarPonto(this, '1030', 'SOFIA DA COSTA AMPARO')"><span>30. Sofia C.</span></button>
+            <button class="btn-aluno" data-id="1001" onclick="computarPonto(this, '1001', 'ALYCE FERNANDA CASONI DO NASCIMENTO')"><span>1. Alyce F.</span></button>
+            <button class="btn-aluno" data-id="1002" onclick="computarPonto(this, '1002', 'ANA CLARA FERREIRA DE OLIVEIRA')"><span>2. Ana Clara</span></button>
+            <button class="btn-aluno" data-id="1003" onclick="computarPonto(this, '1003', 'ANA JÚLIA DANGL TABET')"><span>3. Ana Júlia</span></button>
+            <button class="btn-aluno" data-id="1004" onclick="computarPonto(this, '1004', 'ANGEL RUBEN HIGUERA MARCANO')"><span>4. Angel R.</span></button>
+            <button class="btn-aluno" data-id="1005" onclick="computarPonto(this, '1005', 'ARTHUR ESCHEMBACH SILVA')"><span>5. Arthur E.</span></button>
+            <button class="btn-aluno" data-id="1006" onclick="computarPonto(this, '1006', 'BRUNO MIGUEL FRANCO DE MORAES')"><span>6. Bruno M.</span></button>
+            <button class="btn-aluno" data-id="1007" onclick="computarPonto(this, '1007', 'CLARA REIS FERNANDES DO VALE')"><span>7. Clara R.</span></button>
+            <button class="btn-aluno" data-id="1008" onclick="computarPonto(this, '1008', 'DAFNE LOMES PACIENCIA')"><span>8. Dafne L.</span></button>
+            <button class="btn-aluno" data-id="1009" onclick="computarPonto(this, '1009', 'DAVI LUCCA LEME DE SOUZA')"><span>9. Davi Lucca</span></button>
+            <button class="btn-aluno" data-id="1010" onclick="computarPonto(this, '1010', 'DAVI SANTOS DAMO')"><span>10. Davi S.</span></button>
+            <button class="btn-aluno" data-id="1011" onclick="computarPonto(this, '1011', 'EVELLYN DE OLIVEIRA BERTANE')"><span>11. Evellyn O.</span></button>
+            <button class="btn-aluno" data-id="1012" onclick="computarPonto(this, '1012', 'GIOVANA CUNHA MOTA')"><span>12. Giovana C.</span></button>
+            <button class="btn-aluno" data-id="1013" onclick="computarPonto(this, '1013', 'GUILHERME DONATO MATTOS DE PAULA')"><span>13. Guilherme D.</span></button>
+            <button class="btn-aluno" data-id="1014" onclick="computarPonto(this, '1014', 'HEITOR DANIEL DE CAMARGO SILVA')"><span>14. Heitor D.</span></button>
+            <button class="btn-aluno" data-id="1015" onclick="computarPonto(this, '1015', 'ISAAC MATHEUS SANTOS DA SILVA')"><span>15. Isaac M.</span></button>
+            <button class="btn-aluno" data-id="1016" onclick="computarPonto(this, '1016', 'ISABELLY COLONIA DE SOUZA')"><span>16. Isabelly C.</span></button>
+            <button class="btn-aluno" data-id="1017" onclick="computarPonto(this, '1017', 'IZABELLE COSTA SANTOS')"><span>17. Izabelle C.</span></button>
+            <button class="btn-aluno" data-id="1018" onclick="computarPonto(this, '1018', 'JASMINY KARLA SANTANA DE ALMEIDA')"><span>18. Jasminy K.</span></button>
+            <button class="btn-aluno" data-id="1019" onclick="computarPonto(this, '1019', 'JULIO VINICIUS PALMEIRA GHIRARDELLI')"><span>19. Julio V.</span></button>
+            <button class="btn-aluno" data-id="1020" onclick="computarPonto(this, '1020', 'KAUÃ AUGUSTO DE SOUZA')"><span>20. Kauã A.</span></button>
+            <button class="btn-aluno" data-id="1021" onclick="computarPonto(this, '1021', 'LORENZO SANTOS SAVI')"><span>21. Lorenzo S.</span></button>
+            <button class="btn-aluno" data-id="1022" onclick="computarPonto(this, '1022', 'MARIA CLARA LEMOS ALMEIDA')"><span>22. Maria Clara</span></button>
+            <button class="btn-aluno" data-id="1023" onclick="computarPonto(this, '1023', 'MIGUEL HENRIQUE BOONEN EUGENIO')"><span>23. Miguel H.</span></button>
+            <button class="btn-aluno" data-id="1024" onclick="computarPonto(this, '1024', 'MURILO HENRIQUE DA SILVA CITRAN')"><span>24. Murilo H.</span></button>
+            <button class="btn-aluno" data-id="1025" onclick="computarPonto(this, '1025', 'NICOLAS RAFAEL DIONISIO TRIQUEIROS')"><span>25. Nicolas R.</span></button>
+            <button class="btn-aluno" data-id="1026" onclick="computarPonto(this, '1026', 'OLIVIA FERREIRA PRESTES')"><span>26. Olivia F.</span></button>
+            <button class="btn-aluno" data-id="1027" onclick="computarPonto(this, '1027', 'OTÁVIO BARBOSA SILVA')"><span>27. Otávio B.</span></button>
+            <button class="btn-aluno" data-id="1028" onclick="computarPonto(this, '1028', 'PIETRA LABELLA MOREIRA SANTOS')"><span>28. Pietra L.</span></button>
+            <button class="btn-aluno" data-id="1029" onclick="computarPonto(this, '1029', 'RYAN LUCAS NASCIMENTO SANTOS')"><span>29. Ryan L.</span></button>
+            <button class="btn-aluno" data-id="1030" onclick="computarPonto(this, '1030', 'SOFIA DA COSTA AMPARO')"><span>30. Sofia C.</span></button>
         </div>
 
         <div class="barra-status" id="status">Aguardando seleção de ocorrência...</div>
+
+        <!-- SEÇÃO DE RANKING -->
+        <div class="secao-titulo">🏆 Ranking Geral de XP (Turma 7º Ano)</div>
+        <table class="tabela-ranking">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Nome do Aluno</th>
+                    <th style="width: 100px; text-align: right;">XP Total</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-tabela-ranking">
+                <tr><td colspan="3" style="text-align:center; color:#7f8c8d;">Carregando ranking...</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -257,6 +290,11 @@
             document.getElementById("status").innerText = "Aguardando seleção de ocorrência...";
             
             lancarPopUp("🔓 Painel Liberado!", "sucesso");
+            
+            // Inicia funções adicionais
+            carregarAtividadesRecentes();
+            escutarRankingEmTempoReal();
+
         } catch (e) {
             document.getElementById("btn-entrar").innerText = "Entrar no Painel";
             erroBox.innerText = "Falha na autenticação: " + e.message;
@@ -278,6 +316,7 @@
         document.getElementById("status").innerText = statusTxt;
         
         lancarPopUp(`Ação: ${motivo}`, "sucesso");
+        verificarAlunosConcluidos();
     }
 
     async function computarPonto(botaoAluno, id, nomeCompleto) {
@@ -325,6 +364,9 @@
             lancarPopUp(`✅ ${primeiroNome}: ${acaoAtivaXP > 0 ? '+' : ''}${acaoAtivaXP} XP!`, "sucesso");
             document.getElementById("status").innerText = `✅ Sucesso! ${acaoAtivaMotivo} computado para ${nomeCompleto}.`;
             
+            // Re-verifica se o aluno deve ficar verde fixo
+            verificarAlunosConcluidos();
+
             setTimeout(() => {
                 if(acaoAtivaMotivo) {
                     document.getElementById("status").innerText = `PRONTO: Clique nos alunos para aplicar [ ${acaoAtivaMotivo} (${acaoAtivaXP > 0 ? '+' : ''}${acaoAtivaXP} XP) ]`;
@@ -335,6 +377,123 @@
             document.getElementById("status").innerText = `❌ Erro: ${error.message}`;
             lancarPopUp("❌ Falha de Conexão!", "erro");
         }
+    }
+
+    // ========================================================
+    // RECURSOS ADICIONADOS: ATIVIDADES RECENTES E VERIFICAÇÃO VERDE
+    // ========================================================
+
+    async function carregarAtividadesRecentes() {
+        const select = document.getElementById("select-atividades-recentes");
+        select.innerHTML = '<option value="">Carregando...</option>';
+
+        try {
+            const snapshot = await db.collection("historico")
+                .orderBy("data", "desc")
+                .limit(100)
+                .get();
+
+            const atividadesSet = new Set();
+            snapshot.forEach(doc => {
+                const c = doc.data().conteudo;
+                if(c && c !== "Conteúdo não especificado") {
+                    atividadesSet.add(c);
+                }
+            });
+
+            select.innerHTML = '<option value="">-- Selecione uma atividade anterior --</option>';
+            atividadesSet.forEach(atividade => {
+                const opt = document.createElement("option");
+                opt.value = atividade;
+                opt.innerText = atividade;
+                select.appendChild(opt);
+            });
+
+            lancarPopUp("📋 Atividades Recentes Carregadas", "sucesso");
+        } catch (e) {
+            select.innerHTML = '<option value="">Erro ao carregar</option>';
+            console.error("Erro ao carregar histórico de conteúdos:", e);
+        }
+    }
+
+    function selecionarAtividadeRecente(selectElem) {
+        if(selectElem.value) {
+            document.getElementById("conteudo-aula").value = selectElem.value;
+            verificarAlunosConcluidos();
+        }
+    }
+
+    async function verificarAlunosConcluidos() {
+        const conteudo = document.getElementById("conteudo-aula").value.trim();
+        const botoesAlunos = document.querySelectorAll(".btn-aluno");
+
+        // Limpa estado concluído anterior
+        botoesAlunos.forEach(btn => btn.classList.remove("concluido"));
+
+        // Só faz a verificação se houver um conteúdo preenchido e se for ação de Lição
+        if(!conteudo || (acaoAtivaMotivo !== "Lição Concluída" && acaoAtivaMotivo !== "Lição do dia")) {
+            return;
+        }
+
+        try {
+            const snapshot = await db.collection("historico")
+                .where("conteudo", "==", conteudo)
+                .where("motivo", "==", acaoAtivaMotivo)
+                .get();
+
+            const alunosConcluidosIds = new Set();
+            snapshot.forEach(doc => {
+                alunosConcluidosIds.add(doc.data().aluno_id);
+            });
+
+            botoesAlunos.forEach(btn => {
+                const id = btn.getAttribute("data-id");
+                if(alunosConcluidosIds.has(id)) {
+                    btn.classList.add("concluido");
+                }
+            });
+
+        } catch (e) {
+            console.error("Erro ao verificar alunos concluídos:", e);
+        }
+    }
+
+    // ========================================================
+    // RECURSO ADICIONADO: RANKING EM TEMPO REAL
+    // ========================================================
+
+    function escutarRankingEmTempoReal() {
+        db.collection("alunos")
+            .orderBy("xp_atual", "desc")
+            .onSnapshot(snapshot => {
+                const corpoTabela = document.getElementById("corpo-tabela-ranking");
+                corpoTabela.innerHTML = "";
+
+                if(snapshot.empty) {
+                    corpoTabela.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nenhum aluno registrado ainda.</td></tr>';
+                    return;
+                }
+
+                let posicao = 1;
+                snapshot.forEach(doc => {
+                    const dados = doc.data();
+                    const tr = document.createElement("tr");
+
+                    let classePos = posicao <= 3 ? "posicao-top3" : "";
+                    let medalha = posicao === 1 ? "🥇 " : posicao === 2 ? "🥈 " : posicao === 3 ? "🥉 " : "";
+
+                    tr.innerHTML = `
+                        <td class="${classePos}">${medalha}${posicao}º</td>
+                        <td>${dados.nome || "Sem Nome"}</td>
+                        <td style="text-align: right; font-weight: bold; color: #27ae60;">${dados.xp_atual || 0} XP</td>
+                    `;
+
+                    corpoTabela.appendChild(tr);
+                    posicao++;
+                });
+            }, error => {
+                console.error("Erro ao escutar ranking:", error);
+            });
     }
 </script>
 </body>
