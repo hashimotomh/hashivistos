@@ -32,6 +32,7 @@
         
         .btn-acao { background-color: #ecf0f1; border: 1px solid #bdc3c7; transition: all 0.2s; margin-right: 5px; margin-bottom: 5px; }
         .btn-acao.ativo { background-color: #3498db; color: #fff; border-color: #2980b9; font-weight: bold; }
+        .btn-acao.remover.ativo { background-color: #e74c3c; color: #fff; border-color: #c0392b; }
         
         .grid-alunos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 15px; }
         .btn-aluno { background-color: #ffffff; border: 2px solid #34495e; color: #2c3e50; padding: 12px; border-radius: 8px; text-align: left; font-weight: 600; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
@@ -44,6 +45,20 @@
         .status-bar { background: #eef2f7; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-weight: 500; }
         .piscar { animation: flash 0.5s; }
         @keyframes flash { 0% { background-color: #f1c40f; } 100% { background-color: #ffffff; } }
+
+        /* Estilos do Relatório de Resumo */
+        .relatorio-alunos { margin-top: 30px; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .relatorio-alunos h3 { margin-top: 0; margin-bottom: 15px; color: #2c3e50; }
+        .tabela-container { overflow-x: auto; }
+        table.tabela-relatorio { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+        table.tabela-relatorio th, table.tabela-relatorio td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+        table.tabela-relatorio th { background-color: #f8fafc; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+        table.tabela-relatorio tr:hover { background-color: #f1f5f9; }
+        
+        .badge-num { display: inline-block; padding: 2px 8px; border-radius: 10px; font-weight: bold; font-size: 12px; }
+        .badge-verde { background-color: #dcfce7; color: #166534; }
+        .badge-vermelho { background-color: #fee2e2; color: #991b1b; }
+        .badge-cinza { background-color: #f1f5f9; color: #475569; }
     </style>
 </head>
 <body>
@@ -79,6 +94,7 @@
             </select>
 
             <button onclick="cadastrarNovaAtividade()" style="background:#8e44ad; color:white; border:none;">+ Nova Atividade</button>
+            <button onclick="excluirAtividadeAtual()" style="background:#e74c3c; color:white; border:none; margin-left: 5px;">🗑️ Excluir Atividade</button>
         </div>
 
         <div class="secao">
@@ -88,6 +104,7 @@
             <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Plataforma feita')">💻 Plataforma</button>
             <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Não trouxe material')">📚 Sem Material</button>
             <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Desrespeito')">⚠️ Desrespeito</button>
+            <button class="btn-acao remover" onclick="selecionarOcorrencia(this, 'REMOVER_VISTO')">❌ Remover Visto / Limpar</button>
         </div>
 
         <hr>
@@ -103,6 +120,30 @@
             <button id="btn-importar-alunos" onclick="importarAlunosParaBanco()" style="background:#e67e22; color:white; border:none;">🔄 Sincronizar / Limpar Alunos</button>
             <button onclick="gerarRelatorioPlanilha('xlsx')" style="background:#27ae60; color:white; border:none; margin-left: 10px;">📊 Baixar Relatório (Excel)</button>
         </div>
+
+        <!-- SEÇÃO DE RELATÓRIO DE RESUMO DOS ALUNOS -->
+        <section class="relatorio-alunos">
+            <h3>📋 Relatório Geral do Desempenho dos Alunos</h3>
+            <div class="tabela-container">
+                <table class="tabela-relatorio">
+                    <thead>
+                        <tr>
+                            <th>Nome do Aluno</th>
+                            <th>Vistos em Dia</th>
+                            <th>Vistos Atrasados</th>
+                            <th>Sem Material</th>
+                            <th>Vezes que Tirou Dúvidas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo-tabela-relatorio">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #7f8c8d;">Selecione uma turma para visualizar o relatório.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
     </div>
 
     <script>
@@ -327,6 +368,7 @@
         function aoMudarTurma() {
             carregarAlunosTurmaDoBanco();
             carregarAtividadesDaTurma();
+            carregarRelatorioResumido();
         }
 
         async function carregarAtividadesDaTurma(atividadeParaSelecionar = null) {
@@ -407,6 +449,51 @@
             }
         }
 
+        async function excluirAtividadeAtual() {
+            const turma = document.getElementById("select-turma").value;
+            const selectAtiv = document.getElementById("select-atividade");
+            const atividadeNome = selectAtiv.value;
+
+            if (!turma) {
+                lancarPopUp("⚠️ Escolha uma turma antes!", "erro");
+                return;
+            }
+
+            if (atividadeNome === "Geral/Aula") {
+                lancarPopUp("⚠️ Não é possível excluir 'Geral / Aula Convencional'", "erro");
+                alert("A opção padrão 'Geral / Aula Convencional' não pode ser excluída.");
+                return;
+            }
+
+            if (!confirm(`Tem certeza que deseja excluir permanentemente a atividade "${atividadeNome}" da Turma ${turma}?`)) {
+                return;
+            }
+
+            try {
+                lancarPopUp("Excluindo atividade...", "carregando");
+
+                const snapAtiv = await db.collection("atividades")
+                                        .where("turma", "==", turma)
+                                        .where("nome", "==", atividadeNome)
+                                        .get();
+
+                let batch = db.batch();
+                snapAtiv.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+
+                lancarPopUp("✅ Atividade Excluída!", "sucesso");
+                document.getElementById("status").innerText = `🗑️ Atividade "${atividadeNome}" foi removida.`;
+                
+                carregarAtividadesDaTurma("Geral/Aula");
+
+            } catch (e) {
+                console.error("Erro ao excluir atividade:", e);
+                lancarPopUp("Erro ao excluir atividade: " + e.message, "erro");
+            }
+        }
+
         async function carregarAlunosTurmaDoBanco() {
             const turma = document.getElementById("select-turma").value;
             const container = document.getElementById("grid-alunos-container");
@@ -430,7 +517,7 @@
                     return;
                 }
 
-                let htmlBtns = `<button class="btn-aluno btn-aluno-teste" data-id="9999" data-nome="ALUNO TESTE" onclick="registrarOcorrencia(this, '9999', 'ALUNO TESTE')"><span class="nome-txt">⚙️ TESTE</span></button>`;
+                let htmlBtns = `<button class="btn-aluno btn-aluno-teste" data-id="9999" data-nome="ALUNO TESTE" onclick="tratarCliqueAluno(this, '9999', 'ALUNO TESTE')"><span class="nome-txt">⚙️ TESTE</span></button>`;
 
                 let alunosEncontrados = [];
                 snapshot.forEach(doc => {
@@ -447,7 +534,7 @@
 
                 alunosEncontrados.forEach(aluno => {
                     const identificador = aluno.email || aluno.nome;
-                    htmlBtns += `<button class="btn-aluno" data-id="${identificador}" data-nome="${aluno.nome}" onclick="registrarOcorrencia(this, '${identificador}', '${aluno.nome}')"><span class="nome-txt">${aluno.nome}</span></button>`;
+                    htmlBtns += `<button class="btn-aluno" data-id="${identificador}" data-nome="${aluno.nome}" onclick="tratarCliqueAluno(this, '${identificador}', '${aluno.nome}')"><span class="nome-txt">${aluno.nome}</span></button>`;
                 });
 
                 container.innerHTML = htmlBtns;
@@ -534,6 +621,98 @@
                 });
             } catch (e) {
                 console.error("Erro ao verificar lições concluídas:", e);
+            }
+        }
+
+        /* FUNÇÃO PARA CARREGAR O RELATÓRIO DE RESUMO */
+        async function carregarRelatorioResumido() {
+            const turma = document.getElementById("select-turma").value;
+            const tbody = document.getElementById("corpo-tabela-relatorio");
+
+            if (!turma) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #7f8c8d;">Selecione uma turma para visualizar o relatório.</td></tr>';
+                return;
+            }
+
+            try {
+                let snapAlunos = await db.collection(COLECAO_ALUNOS)
+                                         .where("turma", "==", turma)
+                                         .get();
+
+                let listaAlunos = [];
+                snapAlunos.forEach(doc => {
+                    const data = doc.data();
+                    listaAlunos.push({
+                        id: doc.id,
+                        nome: data.nome || "Sem Nome",
+                        email: data.email_aluno || "",
+                        ordem: data.ordem_matricula !== undefined ? data.ordem_matricula : 999
+                    });
+                });
+
+                listaAlunos.sort((a, b) => a.ordem - b.ordem);
+
+                if (listaAlunos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #e74c3c;">Nenhum aluno cadastrado nesta turma.</td></tr>';
+                    return;
+                }
+
+                let snapHist = await db.collection(COLECAO_OCORRENCIAS)
+                                       .where("turma", "==", turma)
+                                       .get();
+
+                let resumo = {};
+                listaAlunos.forEach(a => {
+                    const key = a.email || a.nome;
+                    resumo[key] = {
+                        nome: a.nome,
+                        vistosEmDia: 0,
+                        vistosAtrasados: 0,
+                        semMaterial: 0,
+                        duvidas: 0
+                    };
+                });
+
+                snapHist.forEach(doc => {
+                    const h = doc.data();
+                    const key = h.aluno_id || h.aluno_nome;
+
+                    if (resumo[key]) {
+                        if (h.ocorrencia === "Lição de Sala feita") {
+                            if (h.emAtraso) {
+                                resumo[key].vistosAtrasados += 1;
+                            } else {
+                                resumo[key].vistosEmDia += 1;
+                            }
+                        } else if (h.ocorrencia === "Tirou Dúvidas") {
+                            resumo[key].duvidas += 1;
+                        } else if (h.ocorrencia === "Não trouxe material") {
+                            resumo[key].semMaterial += 1;
+                        }
+                    }
+                });
+
+                let htmlLinhas = "";
+                listaAlunos.forEach(aluno => {
+                    const key = aluno.email || aluno.nome;
+                    const dados = resumo[key];
+
+                    htmlLinhas += `
+                        <tr>
+                            <td><strong>${dados.nome}</strong></td>
+                            <td><span class="badge-num ${dados.vistosEmDia > 0 ? 'badge-verde' : 'badge-cinza'}">${dados.vistosEmDia}</span></td>
+                            <td><span class="badge-num ${dados.vistosAtrasados > 0 ? 'badge-vermelho' : 'badge-cinza'}">${dados.vistosAtrasados}</span></td>
+                            <td><span class="badge-num ${dados.semMaterial > 0 ? 'badge-vermelho' : 'badge-cinza'}">${dados.semMaterial}</span></td>
+                            <td><span class="badge-num ${dados.duvidas > 0 ? 'badge-verde' : 'badge-cinza'}">${dados.duvidas}</span></td>
+                        </tr>
+                    `;
+                });
+
+                tbody.innerHTML = htmlLinhas;
+
+            } catch (e) {
+                console.error("Erro ao carregar relatório resumido:", e);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e74c3c;">Erro ao gerar relatório: ${e.message}</td></tr>`;
             }
         }
 
@@ -658,8 +837,75 @@
             botao.classList.add('ativo');
             ocorrenciaAtiva = ocorrencia;
             
-            document.getElementById("status").innerText = `PRONTO: Clique no aluno para registrar [ ${ocorrencia} ]`;
-            lancarPopUp(`Ação selecionada: ${ocorrencia}`, "sucesso");
+            if (ocorrencia === "REMOVER_VISTO") {
+                document.getElementById("status").innerText = `MODO REMOÇÃO: Clique no aluno para REMOVER o registro da atividade atual`;
+                lancarPopUp(`Ação selecionada: Remover Visto`, "erro");
+            } else {
+                document.getElementById("status").innerText = `PRONTO: Clique no aluno para registrar [ ${ocorrencia} ]`;
+                lancarPopUp(`Ação selecionada: ${ocorrencia}`, "sucesso");
+            }
+        }
+
+        function tratarCliqueAluno(botaoAluno, alunoId, nomeAluno) {
+            if (ocorrenciaAtiva === "REMOVER_VISTO") {
+                removerOcorrenciaAtividade(alunoId, nomeAluno);
+            } else {
+                registrarOcorrencia(botaoAluno, alunoId, nomeAluno);
+            }
+        }
+
+        async function removerOcorrenciaAtividade(alunoId, nomeAluno) {
+            const turma = document.getElementById("select-turma").value;
+            const atividade = document.getElementById("select-atividade").value;
+
+            if (!turma) {
+                lancarPopUp("⚠️ Escolha a Turma!", "erro");
+                return;
+            }
+
+            lancarPopUp(`Removendo registros de ${nomeAluno}...`, "carregando");
+
+            try {
+                const snapPorId = await db.collection(COLECAO_OCORRENCIAS)
+                                        .where("turma", "==", turma)
+                                        .where("atividade", "==", atividade)
+                                        .where("aluno_id", "==", alunoId)
+                                        .get();
+
+                const snapPorNome = await db.collection(COLECAO_OCORRENCIAS)
+                                        .where("turma", "==", turma)
+                                        .where("atividade", "==", atividade)
+                                        .where("aluno_nome", "==", nomeAluno)
+                                        .get();
+
+                let batch = db.batch();
+                let totalRemovidos = 0;
+
+                snapPorId.forEach(doc => {
+                    batch.delete(doc.ref);
+                    totalRemovidos++;
+                });
+
+                snapPorNome.forEach(doc => {
+                    batch.delete(doc.ref);
+                    totalRemovidos++;
+                });
+
+                if (totalRemovidos > 0) {
+                    await batch.commit();
+                    await marcarAlunosComLicaoFeita();
+                    await carregarRelatorioResumido();
+                    lancarPopUp(`🗑️ Registros de ${nomeAluno} removidos!`, "sucesso");
+                    document.getElementById("status").innerText = `🗑️ Visto/Ocorrência de "${nomeAluno}" removidos na atividade "${atividade}".`;
+                } else {
+                    lancarPopUp(`Nenhum registro encontrado para ${nomeAluno}`, "erro");
+                }
+
+            } catch (error) {
+                console.error("Erro ao remover ocorrência:", error);
+                document.getElementById("status").innerText = `❌ Erro ao remover: ${error.message}`;
+                lancarPopUp("❌ Falha ao remover registro!", "erro");
+            }
         }
 
         async function registrarOcorrencia(botaoAluno, alunoId, nomeAluno) {
@@ -695,6 +941,7 @@
                 });
 
                 await marcarAlunosComLicaoFeita();
+                await carregarRelatorioResumido();
 
                 if (ocorrenciaAtiva !== "Lição de Sala feita" && ocorrenciaAtiva !== "Tirou Dúvidas") {
                     botaoAluno.classList.add('piscar');
