@@ -35,7 +35,7 @@
         .btn-acao.remover.ativo { background-color: #e74c3c; color: #fff; border-color: #c0392b; }
         
         .grid-alunos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 15px; }
-        .btn-aluno { background-color: #ffffff; border: 2px solid #34495e; color: #2c3e50; padding: 12px; border-radius: 8px; text-align: left; font-weight: 600; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
+        .btn-aluno { background-color: #ffffff; border: 2px solid #34495e; color: #2c3e50; padding: 12px; border-radius: 8px; text-align: left; font-weight: 600; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; user-select: none; -webkit-user-select: none; }
         .btn-aluno-teste { border-dash: 2px dashed #7f8c8d; background-color: #f8f9fa; }
         
         .btn-aluno.licao-concluida { background-color: #d4edda; border-color: #28a745; color: #155724; }
@@ -59,6 +59,8 @@
         .badge-verde { background-color: #dcfce7; color: #166534; }
         .badge-vermelho { background-color: #fee2e2; color: #991b1b; }
         .badge-cinza { background-color: #f1f5f9; color: #475569; }
+        
+        .select-bimestre { background-color: #eef2f7; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; }
     </style>
 </head>
 <body>
@@ -79,7 +81,13 @@
         <div class="status-bar" id="status">Selecione uma turma para iniciar.</div>
 
         <div class="secao">
-            <label for="select-turma">Turma:</label>
+            <label for="select-bimestre">Bimestre:</label>
+            <select id="select-bimestre" class="select-bimestre" onchange="aoMudarBimestre()">
+                <option value="4" selected>4º Bimestre (Atual: A partir de 27/09)</option>
+                <option value="3">3º Bimestre (Consulta: Até 26/09)</option>
+            </select>
+
+            <label for="select-turma" style="margin-left: 15px;">Turma:</label>
             <select id="select-turma" onchange="aoMudarTurma()">
                 <option value="">-- Selecione --</option>
                 <option value="1F">1F</option>
@@ -93,8 +101,8 @@
                 <option value="Geral/Aula" data-prazo="">Geral / Aula Convencional</option>
             </select>
 
-            <button onclick="cadastrarNovaAtividade()" style="background:#8e44ad; color:white; border:none;">+ Nova Atividade</button>
-            <button onclick="excluirAtividadeAtual()" style="background:#e74c3c; color:white; border:none; margin-left: 5px;">🗑️ Excluir Atividade</button>
+            <button onclick="cadastrarNovaAtividade()" style="background:#8e44ad; color:white; border:none; margin-top:5px;">+ Nova Atividade</button>
+            <button onclick="excluirAtividadeAtual()" style="background:#e74c3c; color:white; border:none; margin-left: 5px; margin-top:5px;">🗑️ Excluir Atividade</button>
         </div>
 
         <div class="secao">
@@ -123,7 +131,7 @@
 
         <!-- SEÇÃO DE RELATÓRIO DE RESUMO DOS ALUNOS -->
         <section class="relatorio-alunos">
-            <h3>📋 Relatório Geral do Desempenho dos Alunos</h3>
+            <h3 id="titulo-relatorio">📋 Relatório Geral do Desempenho dos Alunos (4º Bimestre)</h3>
             <div class="tabela-container">
                 <table class="tabela-relatorio">
                     <thead>
@@ -148,7 +156,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyBtY3gnLGcX9biqtgy9Um7C2e1Y21-DSP8",
+            apiKey: "AIzaSyBtY3gnLGcX9biqtgy9 Um7C2e1Y21-DSP8",
             authDomain: "gamificacao-hashi.firebaseapp.com",
             projectId: "gamificacao-hashi",
             storageBucket: "gamificacao-hashi.firebasestorage.app",
@@ -164,6 +172,11 @@
         let ocorrenciaAtiva = "";
         const COLECAO_ALUNOS = "alunos_novos";
         const COLECAO_OCORRENCIAS = "ocorrencias_aulas";
+        const DATA_CORTE_BIMESTRE = "2026-09-27"; // Corte para separação dos bimestres
+
+        // Variável de controle para o clique longo
+        let longPressTimer = null;
+        let isLongPress = false;
 
         const LISTA_ALUNOS_PILOTO = [
           // --- TURMA 1F ---
@@ -343,6 +356,33 @@
             return `${ano}-${mes}-${dia}`;
         }
 
+        // Função utilitária para extrair data string (AAAA-MM-DD) do registro no banco
+        function extrairDataRegistro(dataObj) {
+            if (!dataObj) return "";
+            if (dataObj.data_string) return dataObj.data_string;
+            if (dataObj.data && typeof dataObj.data.toDate === 'function') {
+                const d = dataObj.data.toDate();
+                const ano = d.getFullYear();
+                const mes = String(d.getMonth() + 1).padStart(2, '0');
+                const dia = String(d.getDate()).padStart(2, '0');
+                return `${ano}-${mes}-${dia}`;
+            }
+            return "";
+        }
+
+        function pertenceAoBimestreSelecionado(dataRegistroStr) {
+            const bimestre = document.getElementById("select-bimestre").value;
+            if (!dataRegistroStr) {
+                // Se o registro não possui data legível, considera padrão no 4º Bimestre
+                return bimestre === "4";
+            }
+            if (bimestre === "3") {
+                return dataRegistroStr < DATA_CORTE_BIMESTRE;
+            } else {
+                return dataRegistroStr >= DATA_CORTE_BIMESTRE;
+            }
+        }
+
         async function fazerLoginProfessor() {
             const email = document.getElementById("email-prof").value.trim();
             const senha = document.getElementById("senha-prof").value.trim();
@@ -362,6 +402,22 @@
             } catch (e) {
                 erroBox.innerText = "Falha no login: " + e.message;
                 erroBox.style.display = "block";
+            }
+        }
+
+        function aoMudarBimestre() {
+            const bim = document.getElementById("select-bimestre").value;
+            document.getElementById("titulo-relatorio").innerText = `📋 Relatório Geral do Desempenho dos Alunos (${bim}º Bimestre)`;
+            
+            if (bim === "3") {
+                document.getElementById("status").innerText = "MODO DE CONSULTA: Visualizando registros do 3º Bimestre (Até 26/09/2026).";
+            } else {
+                document.getElementById("status").innerText = "MODO ATIVO: Visualizando e registrando no 4º Bimestre (A partir de 27/09/2026).";
+            }
+
+            if (document.getElementById("select-turma").value) {
+                carregarAtividadesDaTurma();
+                carregarRelatorioResumido();
             }
         }
 
@@ -387,11 +443,25 @@
                 let lista = [];
                 snapshot.forEach(doc => {
                     const item = doc.data();
-                    lista.push({
-                        nome: item.nome,
-                        dataLimite: item.dataLimite || "",
-                        criadoEm: item.criadoEm ? item.criadoEm.toMillis() : 0
-                    });
+                    
+                    // Extrair data da atividade para aplicar o filtro de bimestre
+                    let dataRefStr = item.dataLimite || "";
+                    if (!dataRefStr && item.criadoEm && typeof item.criadoEm.toDate === 'function') {
+                        const d = item.criadoEm.toDate();
+                        const ano = d.getFullYear();
+                        const mes = String(d.getMonth() + 1).padStart(2, '0');
+                        const dia = String(d.getDate()).padStart(2, '0');
+                        dataRefStr = `${ano}-${mes}-${dia}`;
+                    }
+
+                    // Adiciona a atividade apenas se pertencer ao bimestre selecionado
+                    if (pertenceAoBimestreSelecionado(dataRefStr)) {
+                        lista.push({
+                            nome: item.nome,
+                            dataLimite: item.dataLimite || "",
+                            criadoEm: item.criadoEm ? item.criadoEm.toMillis() : 0
+                        });
+                    }
                 });
 
                 lista.sort((a, b) => b.criadoEm - a.criadoEm);
@@ -517,7 +587,7 @@
                     return;
                 }
 
-                let htmlBtns = `<button class="btn-aluno btn-aluno-teste" data-id="9999" data-nome="ALUNO TESTE" onclick="tratarCliqueAluno(this, '9999', 'ALUNO TESTE')"><span class="nome-txt">⚙️ TESTE</span></button>`;
+                let htmlBtns = `<button class="btn-aluno btn-aluno-teste" data-id="9999" data-nome="ALUNO TESTE"><span class="nome-txt">⚙️ TESTE</span></button>`;
 
                 let alunosEncontrados = [];
                 snapshot.forEach(doc => {
@@ -534,10 +604,11 @@
 
                 alunosEncontrados.forEach(aluno => {
                     const identificador = aluno.email || aluno.nome;
-                    htmlBtns += `<button class="btn-aluno" data-id="${identificador}" data-nome="${aluno.nome}" onclick="tratarCliqueAluno(this, '${identificador}', '${aluno.nome}')"><span class="nome-txt">${aluno.nome}</span></button>`;
+                    htmlBtns += `<button class="btn-aluno" data-id="${identificador}" data-nome="${aluno.nome}"><span class="nome-txt">${aluno.nome}</span></button>`;
                 });
 
                 container.innerHTML = htmlBtns;
+                vincularEventosCliqueAlunos();
                 lancarPopUp(`Carregados ${alunosEncontrados.length} alunos!`, "sucesso");
 
                 marcarAlunosComLicaoFeita();
@@ -547,6 +618,53 @@
                 container.innerHTML = `<p style="color:#e74c3c;">Erro ao buscar alunos: ${e.message}</p>`;
                 lancarPopUp("Erro no carregamento", "erro");
             }
+        }
+
+        // Função para vincular eventos de clique curto e clique longo nos botões dos alunos
+        function vincularEventosCliqueAlunos() {
+            document.querySelectorAll(".btn-aluno").forEach(btn => {
+                const alunoId = btn.getAttribute("data-id");
+                const alunoNome = btn.getAttribute("data-nome");
+
+                // Início do clique (Touch / Mouse)
+                const startPress = (e) => {
+                    isLongPress = false;
+                    longPressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        if (confirm(`🗑️ Clique longo detectado!\nDeseja apagar o registro/visto de "${alunoNome}" na atividade atual?`)) {
+                            removerOcorrenciaAtividade(alunoId, alunoNome);
+                        }
+                    }, 500); // 500ms para clique longo
+                };
+
+                // Cancelar temporizador em caso de soltar ou mover
+                const cancelPress = () => {
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                };
+
+                // Clique Curto (Executado no clique se não tiver sido clique longo)
+                const handleClick = (e) => {
+                    if (isLongPress) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                    tratarCliqueAluno(btn, alunoId, alunoNome);
+                };
+
+                btn.onmousedown = startPress;
+                btn.onmouseup = cancelPress;
+                btn.onmouseleave = cancelPress;
+
+                btn.ontouchstart = startPress;
+                btn.ontouchend = cancelPress;
+                btn.ontouchmove = cancelPress;
+
+                btn.onclick = handleClick;
+            });
         }
 
         async function marcarAlunosComLicaoFeita() {
@@ -574,17 +692,22 @@
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const key = data.aluno_id || data.aluno_nome;
-                    
-                    if (!statusAlunos[key]) {
-                        statusAlunos[key] = { fezLicao: false, tirouDuvida: false, emAtraso: false };
-                    }
+                    const dataStr = extrairDataRegistro(data);
 
-                    if (data.ocorrencia === "Lição de Sala feita") {
-                        statusAlunos[key].fezLicao = true;
-                        if (data.emAtraso) statusAlunos[key].emAtraso = true;
-                    } else if (data.ocorrencia === "Tirou Dúvidas") {
-                        statusAlunos[key].tirouDuvida = true;
+                    // Filtrar registros do bimestre selecionado
+                    if (pertenceAoBimestreSelecionado(dataStr)) {
+                        const key = data.aluno_id || data.aluno_nome;
+                        
+                        if (!statusAlunos[key]) {
+                            statusAlunos[key] = { fezLicao: false, tirouDuvida: false, emAtraso: false };
+                        }
+
+                        if (data.ocorrencia === "Lição de Sala feita") {
+                            statusAlunos[key].fezLicao = true;
+                            if (data.emAtraso) statusAlunos[key].emAtraso = true;
+                        } else if (data.ocorrencia === "Tirou Dúvidas") {
+                            statusAlunos[key].tirouDuvida = true;
+                        }
                     }
                 });
 
@@ -675,19 +798,23 @@
 
                 snapHist.forEach(doc => {
                     const h = doc.data();
-                    const key = h.aluno_id || h.aluno_nome;
+                    const dataStr = extrairDataRegistro(h);
 
-                    if (resumo[key]) {
-                        if (h.ocorrencia === "Lição de Sala feita") {
-                            if (h.emAtraso) {
-                                resumo[key].vistosAtrasados += 1;
-                            } else {
-                                resumo[key].vistosEmDia += 1;
+                    if (pertenceAoBimestreSelecionado(dataStr)) {
+                        const key = h.aluno_id || h.aluno_nome;
+
+                        if (resumo[key]) {
+                            if (h.ocorrencia === "Lição de Sala feita") {
+                                if (h.emAtraso) {
+                                    resumo[key].vistosAtrasados += 1;
+                                } else {
+                                    resumo[key].vistosEmDia += 1;
+                                }
+                            } else if (h.ocorrencia === "Tirou Dúvidas") {
+                                resumo[key].duvidas += 1;
+                            } else if (h.ocorrencia === "Não trouxe material") {
+                                resumo[key].semMaterial += 1;
                             }
-                        } else if (h.ocorrencia === "Tirou Dúvidas") {
-                            resumo[key].duvidas += 1;
-                        } else if (h.ocorrencia === "Não trouxe material") {
-                            resumo[key].semMaterial += 1;
                         }
                     }
                 });
@@ -841,7 +968,7 @@
                 document.getElementById("status").innerText = `MODO REMOÇÃO: Clique no aluno para REMOVER o registro da atividade atual`;
                 lancarPopUp(`Ação selecionada: Remover Visto`, "erro");
             } else {
-                document.getElementById("status").innerText = `PRONTO: Clique no aluno para registrar [ ${ocorrencia} ]`;
+                document.getElementById("status").innerText = `PRONTO: Clique no aluno para registrar [ ${ocorrencia} ] (Dica: Clique longo no botão do aluno apaga o registro)`;
                 lancarPopUp(`Ação selecionada: ${ocorrencia}`, "sucesso");
             }
         }
@@ -881,15 +1008,16 @@
                 let batch = db.batch();
                 let totalRemovidos = 0;
 
-                snapPorId.forEach(doc => {
-                    batch.delete(doc.ref);
-                    totalRemovidos++;
-                });
+                const processarDocRemocao = (doc) => {
+                    const dataStr = extrairDataRegistro(doc.data());
+                    if (pertenceAoBimestreSelecionado(dataStr)) {
+                        batch.delete(doc.ref);
+                        totalRemovidos++;
+                    }
+                };
 
-                snapPorNome.forEach(doc => {
-                    batch.delete(doc.ref);
-                    totalRemovidos++;
-                });
+                snapPorId.forEach(processarDocRemocao);
+                snapPorNome.forEach(processarDocRemocao);
 
                 if (totalRemovidos > 0) {
                     await batch.commit();
@@ -898,7 +1026,7 @@
                     lancarPopUp(`🗑️ Registros de ${nomeAluno} removidos!`, "sucesso");
                     document.getElementById("status").innerText = `🗑️ Visto/Ocorrência de "${nomeAluno}" removidos na atividade "${atividade}".`;
                 } else {
-                    lancarPopUp(`Nenhum registro encontrado para ${nomeAluno}`, "erro");
+                    lancarPopUp(`Nenhum registro no ${document.getElementById("select-bimestre").value}º Bimestre para ${nomeAluno}`, "erro");
                 }
 
             } catch (error) {
@@ -913,6 +1041,13 @@
             const selectAtiv = document.getElementById("select-atividade");
             const atividade = selectAtiv.value;
             const dataLimite = selectAtiv.options[selectAtiv.selectedIndex].getAttribute("data-prazo");
+            const bimestreAtual = document.getElementById("select-bimestre").value;
+
+            if (bimestreAtual === "3") {
+                lancarPopUp("⚠ O 3º Bimestre está fechado para novos registros!", "erro");
+                alert("O 3º Bimestre está configurado apenas para consulta. Mude para o 4º Bimestre para realizar novos registros.");
+                return;
+            }
 
             if (!turma) {
                 lancarPopUp("⚠️ Escolha a Turma!", "erro");
@@ -959,12 +1094,14 @@
 
         async function gerarRelatorioPlanilha(formato) {
             const turma = document.getElementById("select-turma").value;
+            const bimestre = document.getElementById("select-bimestre").value;
+
             if (!turma) {
                 lancarPopUp("⚠️ Escolha uma turma primeiro!", "erro");
                 return;
             }
 
-            lancarPopUp("Gerando Planilha...", "carregando");
+            lancarPopUp(`Gerando Planilha (${bimestre}º Bimestre)...`, "carregando");
 
             try {
                 let snapAlunos = await db.collection(COLECAO_ALUNOS)
@@ -997,8 +1134,20 @@
 
                 snapAtiv.forEach(doc => {
                     const d = doc.data();
-                    listaAtividades.push({ nome: d.nome, criadoEm: d.criadoEm ? d.criadoEm.toMillis() : 0, dataLimite: d.dataLimite || "" });
-                    mapaPrazos[d.nome] = d.dataLimite || "";
+                    
+                    let dataRefStr = d.dataLimite || "";
+                    if (!dataRefStr && d.criadoEm && typeof d.criadoEm.toDate === 'function') {
+                        const dt = d.criadoEm.toDate();
+                        const ano = dt.getFullYear();
+                        const mes = String(dt.getMonth() + 1).padStart(2, '0');
+                        const dia = String(dt.getDate()).padStart(2, '0');
+                        dataRefStr = `${ano}-${mes}-${dia}`;
+                    }
+
+                    if (pertenceAoBimestreSelecionado(dataRefStr)) {
+                        listaAtividades.push({ nome: d.nome, criadoEm: d.criadoEm ? d.criadoEm.toMillis() : 0, dataLimite: d.dataLimite || "" });
+                        mapaPrazos[d.nome] = d.dataLimite || "";
+                    }
                 });
                 listaAtividades.sort((a, b) => a.criadoEm - b.criadoEm);
 
@@ -1021,20 +1170,24 @@
 
                 snapHist.forEach(doc => {
                     const h = doc.data();
-                    const key = h.aluno_id || h.aluno_nome;
+                    const dataStr = extrairDataRegistro(h);
 
-                    if (dadosAlunos[key]) {
-                        const ativNome = h.atividade || "Geral/Aula";
-                        if (h.ocorrencia === "Lição de Sala feita") {
-                            dadosAlunos[key].licoes[ativNome] = h.emAtraso ? "Entregue com Atraso" : "Entregue no Prazo";
-                        } else if (h.ocorrencia === "Tirou Dúvidas") {
-                            dadosAlunos[key].tirouDuvidas += 1;
-                        } else if (h.ocorrencia === "Plataforma feita") {
-                            dadosAlunos[key].plataforma += 1;
-                        } else if (h.ocorrencia === "Não trouxe material") {
-                            dadosAlunos[key].semMaterial += 1;
-                        } else if (h.ocorrencia === "Desrespeito") {
-                            dadosAlunos[key].desrespeito += 1;
+                    if (pertenceAoBimestreSelecionado(dataStr)) {
+                        const key = h.aluno_id || h.aluno_nome;
+
+                        if (dadosAlunos[key]) {
+                            const ativNome = h.atividade || "Geral/Aula";
+                            if (h.ocorrencia === "Lição de Sala feita") {
+                                dadosAlunos[key].licoes[ativNome] = h.emAtraso ? "Entregue com Atraso" : "Entregue no Prazo";
+                            } else if (h.ocorrencia === "Tirou Dúvidas") {
+                                dadosAlunos[key].tirouDuvidas += 1;
+                            } else if (h.ocorrencia === "Plataforma feita") {
+                                dadosAlunos[key].plataforma += 1;
+                            } else if (h.ocorrencia === "Não trouxe material") {
+                                dadosAlunos[key].semMaterial += 1;
+                            } else if (h.ocorrencia === "Desrespeito") {
+                                dadosAlunos[key].desrespeito += 1;
+                            }
                         }
                     }
                 });
@@ -1076,9 +1229,9 @@
                 colWidths.push({ wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 15 });
                 ws['!cols'] = colWidths;
 
-                XLSX.utils.book_append_sheet(wb, ws, `Turma ${turma}`);
+                XLSX.utils.book_append_sheet(wb, ws, `Turma ${turma} - ${bimestre}B`);
 
-                const nomeArquivo = `Relatorio_Desempenho_${turma}_${hoje}`;
+                const nomeArquivo = `Relatorio_Desempenho_${turma}_${bimestre}Bimestre_${hoje}`;
 
                 if (formato === 'csv') {
                     XLSX.writeFile(wb, `${nomeArquivo}.csv`, { bookType: 'csv' });
