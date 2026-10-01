@@ -40,6 +40,7 @@
         
         .btn-aluno.licao-concluida { background-color: #d4edda; border-color: #28a745; color: #155724; }
         .btn-aluno.licao-atrasada { background-color: #fff3cd; border-color: #ffc107; color: #856404; }
+        .btn-aluno.nao-desenvolveu { background-color: #f8d7da; border-color: #dc3545; color: #721c24; }
         
         .badge-atraso { background-color: #dc3545; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
         .status-bar { background: #eef2f7; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-weight: 500; }
@@ -111,6 +112,7 @@
             <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Tirou Dúvidas')">💡 Tirou Dúvida</button>
             <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Plataforma feita')">💻 Plataforma</button>
             <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Não trouxe material')">📚 Sem Material</button>
+            <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Não desenvolveu')">❌ Não desenvolveu</button>
             <button class="btn-acao" onclick="selecionarOcorrencia(this, 'Desrespeito')">⚠️ Desrespeito</button>
             <button class="btn-acao remover" onclick="selecionarOcorrencia(this, 'REMOVER_VISTO')">❌ Remover Visto / Limpar</button>
         </div>
@@ -139,13 +141,14 @@
                             <th>Nome do Aluno</th>
                             <th>Vistos em Dia</th>
                             <th>Vistos Atrasados</th>
+                            <th>Não Desenvolveu</th>
                             <th>Sem Material</th>
                             <th>Vezes que Tirou Dúvidas</th>
                         </tr>
                     </thead>
                     <tbody id="corpo-tabela-relatorio">
                         <tr>
-                            <td colspan="5" style="text-align: center; color: #7f8c8d;">Selecione uma turma para visualizar o relatório.</td>
+                            <td colspan="6" style="text-align: center; color: #7f8c8d;">Selecione uma turma para visualizar o relatório.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -672,7 +675,7 @@
             const atividade = document.getElementById("select-atividade").value;
 
             document.querySelectorAll(".btn-aluno").forEach(btn => {
-                btn.classList.remove("licao-concluida", "licao-atrasada");
+                btn.classList.remove("licao-concluida", "licao-atrasada", "nao-desenvolveu");
                 const span = btn.querySelector('.nome-txt');
                 const nomeOriginal = btn.getAttribute('data-nome');
                 if (span && nomeOriginal) {
@@ -699,7 +702,7 @@
                         const key = data.aluno_id || data.aluno_nome;
                         
                         if (!statusAlunos[key]) {
-                            statusAlunos[key] = { fezLicao: false, tirouDuvida: false, emAtraso: false };
+                            statusAlunos[key] = { fezLicao: false, tirouDuvida: false, emAtraso: false, naoDesenvolveu: false };
                         }
 
                         if (data.ocorrencia === "Lição de Sala feita") {
@@ -707,6 +710,8 @@
                             if (data.emAtraso) statusAlunos[key].emAtraso = true;
                         } else if (data.ocorrencia === "Tirou Dúvidas") {
                             statusAlunos[key].tirouDuvida = true;
+                        } else if (data.ocorrencia === "Não desenvolveu") {
+                            statusAlunos[key].naoDesenvolveu = true;
                         }
                     }
                 });
@@ -725,7 +730,10 @@
                             textoHTML += "💡 ";
                         }
 
-                        if (reg.fezLicao) {
+                        if (reg.naoDesenvolveu) {
+                            btn.classList.add("nao-desenvolveu");
+                            textoHTML += "❌ " + alunoNome;
+                        } else if (reg.fezLicao) {
                             if (reg.emAtraso) {
                                 btn.classList.add("licao-atrasada");
                                 textoHTML += "✔️ " + alunoNome + `<span class="badge-atraso">ATRASO</span>`;
@@ -753,7 +761,7 @@
             const tbody = document.getElementById("corpo-tabela-relatorio");
 
             if (!turma) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #7f8c8d;">Selecione uma turma para visualizar o relatório.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #7f8c8d;">Selecione uma turma para visualizar o relatório.</td></tr>';
                 return;
             }
 
@@ -776,7 +784,7 @@
                 listaAlunos.sort((a, b) => a.ordem - b.ordem);
 
                 if (listaAlunos.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #e74c3c;">Nenhum aluno cadastrado nesta turma.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #e74c3c;">Nenhum aluno cadastrado nesta turma.</td></tr>';
                     return;
                 }
 
@@ -791,6 +799,7 @@
                         nome: a.nome,
                         vistosEmDia: 0,
                         vistosAtrasados: 0,
+                        naoDesenvolveu: 0,
                         semMaterial: 0,
                         duvidas: 0
                     };
@@ -814,6 +823,8 @@
                                 resumo[key].duvidas += 1;
                             } else if (h.ocorrencia === "Não trouxe material") {
                                 resumo[key].semMaterial += 1;
+                            } else if (h.ocorrencia === "Não desenvolveu") {
+                                resumo[key].naoDesenvolveu += 1;
                             }
                         }
                     }
@@ -829,6 +840,7 @@
                             <td><strong>${dados.nome}</strong></td>
                             <td><span class="badge-num ${dados.vistosEmDia > 0 ? 'badge-verde' : 'badge-cinza'}">${dados.vistosEmDia}</span></td>
                             <td><span class="badge-num ${dados.vistosAtrasados > 0 ? 'badge-vermelho' : 'badge-cinza'}">${dados.vistosAtrasados}</span></td>
+                            <td><span class="badge-num ${dados.naoDesenvolveu > 0 ? 'badge-vermelho' : 'badge-cinza'}">${dados.naoDesenvolveu}</span></td>
                             <td><span class="badge-num ${dados.semMaterial > 0 ? 'badge-vermelho' : 'badge-cinza'}">${dados.semMaterial}</span></td>
                             <td><span class="badge-num ${dados.duvidas > 0 ? 'badge-verde' : 'badge-cinza'}">${dados.duvidas}</span></td>
                         </tr>
@@ -839,7 +851,7 @@
 
             } catch (e) {
                 console.error("Erro ao carregar relatório resumido:", e);
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e74c3c;">Erro ao gerar relatório: ${e.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #e74c3c;">Erro ao gerar relatório: ${e.message}</td></tr>`;
             }
         }
 
@@ -1078,7 +1090,7 @@
                 await marcarAlunosComLicaoFeita();
                 await carregarRelatorioResumido();
 
-                if (ocorrenciaAtiva !== "Lição de Sala feita" && ocorrenciaAtiva !== "Tirou Dúvidas") {
+                if (ocorrenciaAtiva !== "Lição de Sala feita" && ocorrenciaAtiva !== "Tirou Dúvidas" && ocorrenciaAtiva !== "Não desenvolveu") {
                     botaoAluno.classList.add('piscar');
                     setTimeout(() => botaoAluno.classList.remove('piscar'), 500);
                 }
@@ -1163,6 +1175,7 @@
                         licoes: {},
                         tirouDuvidas: 0,
                         plataforma: 0,
+                        naoDesenvolveu: 0,
                         semMaterial: 0,
                         desrespeito: 0
                     };
@@ -1183,6 +1196,9 @@
                                 dadosAlunos[key].tirouDuvidas += 1;
                             } else if (h.ocorrencia === "Plataforma feita") {
                                 dadosAlunos[key].plataforma += 1;
+                            } else if (h.ocorrencia === "Não desenvolveu") {
+                                dadosAlunos[key].naoDesenvolveu += 1;
+                                dadosAlunos[key].licoes[ativNome] = "Não Desenvolveu";
                             } else if (h.ocorrencia === "Não trouxe material") {
                                 dadosAlunos[key].semMaterial += 1;
                             } else if (h.ocorrencia === "Desrespeito") {
@@ -1215,6 +1231,7 @@
 
                     linha["Tirou Dúvidas"] = info.tirouDuvidas;
                     linha["Plataformas Feitas"] = info.plataforma;
+                    linha["Não Desenvolveu"] = info.naoDesenvolveu;
                     linha["Não Trouxe Material"] = info.semMaterial;
                     linha["Desrespeito"] = info.desrespeito;
 
@@ -1226,7 +1243,7 @@
 
                 const colWidths = [{ wch: 35 }];
                 listaAtividades.forEach(() => colWidths.push({ wch: 22 }));
-                colWidths.push({ wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 15 });
+                colWidths.push({ wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 15 });
                 ws['!cols'] = colWidths;
 
                 XLSX.utils.book_append_sheet(wb, ws, `Turma ${turma} - ${bimestre}B`);
